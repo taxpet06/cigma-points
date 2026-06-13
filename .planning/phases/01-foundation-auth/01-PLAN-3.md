@@ -1,0 +1,203 @@
+---
+phase: 01-foundation-auth
+plan: 3
+type: execute
+wave: 3
+depends_on: ["01-1", "01-2"]
+files_modified:
+  - src/auth.ts
+  - src/app/api/auth/[...nextauth]/route.ts
+  - src/app/api/auth/register/route.ts
+  - src/lib/actions/auth.ts
+  - src/lib/auth-helpers.ts
+  - src/middleware.ts
+  - next-auth.d.ts
+  - tsconfig.json
+autonomous: true
+
+requirements: [AUTH-01, AUTH-02, AUTH-03, AUTH-04]
+
+must_haves:
+  truths:
+    - "A new user can register (password hashed, User row created)"
+    - "A user can log in with email + password via the credentials provider"
+    - "The session is JWT-based and carries the user's role claim"
+    - "Non-ADMIN users are redirected away from /admin; ADMIN users pass"
+  artifacts:
+    - path: "src/auth.ts"
+      provides: "NextAuth v5 config: handlers, auth, signIn, signOut with role callbacks"
+      exports: ["handlers", "auth", "signIn", "signOut"]
+    - path: "src/app/api/auth/[...nextauth]/route.ts"
+      provides: "GET/POST NextAuth handlers"
+      exports: ["GET", "POST"]
+    - path: "src/lib/actions/auth.ts"
+      provides: "signUp server action (bcrypt hash + create + auto sign-in)"
+    - path: "src/middleware.ts"
+      provides: "Edge auth + admin role guard"
+    - path: "next-auth.d.ts"
+      provides: "Module augmentation adding role to Session and JWT"
+      contains: "role"
+  key_links:
+    - from: "src/auth.ts"
+      to: "src/lib/db.ts"
+      via: "PrismaAdapter(db) + authorize lookup"
+      pattern: "PrismaAdapter"
+    - from: "src/middleware.ts"
+      to: "src/auth.ts"
+      via: "auth() wrapper, req.auth.user.role"
+      pattern: "req\\.auth"
+    - from: "src/auth.ts jwt/session callbacks"
+      to: "token.role / session.user.role"
+      via: "role claim copy"
+      pattern: "token\\.role"
+---
+
+<objective>
+Implement the full NextAuth v5 authentication system: credentials provider with bcrypt validation, JWT sessions carrying a role claim, registration server action, TypeScript augmentation for the role, and edge middleware enforcing admin route access. This is the auth + access-control slice of the Walking Skeleton — it makes the AUTH E2E specs from Plan 1 pass.
+
+Purpose: Deliver AUTH-01 through AUTH-04 using the v5 patterns research verified (single auth.ts, universal auth(), middleware wrapper, module augmentation without `satisfies`).
+Output: Working sign-up, sign-in, JWT-with-role sessions, and a middleware that blocks non-admins from /admin.
+</objective>
+
+<execution_context>
+@$HOME/.claude/get-shit-done/workflows/execute-plan.md
+@$HOME/.claude/get-shit-done/templates/summary.md
+</execution_context>
+
+<context>
+@.planning/PROJECT.md
+@.planning/ROADMAP.md
+@.planning/phases/01-foundation-auth/01-RESEARCH.md
+
+<interfaces>
+<!-- Critical v5 patterns + anti-patterns from RESEARCH.md (Patterns 2,3,4,5,8; Pitfalls 3,4,5). -->
+
+src/auth.ts MUST export: { handlers, auth, signIn, signOut } = NextAuth({...})
+  - adapter: PrismaAdapter(db)   from "@auth/prisma-adapter"  (NOT @next-auth/prisma-adapter)
+  - session: { strategy: "jwt" }
+  - Credentials provider with async authorize(credentials) using bcrypt.compare
+  - callbacks.jwt: if (user) token.role = user.role
+  - callbacks.session: session.user.role = token.role
+  - DO NOT use `satisfies AuthConfig` (Pitfall 3 — breaks module augmentation)
+
+next-auth.d.ts at PROJECT ROOT (not src/) — augments Session.user.role, User.role, JWT.role.
+  Must be covered by tsconfig include glob.
+
+middleware uses: export default auth((req) => {...}); req.auth holds session.
+  matcher excludes /api/auth, _next/static, _next/image, favicon.ico.
+
+db import path: import { db } from "@/lib/db"  (created in Plan 2)
+Generated Role type: import from "@/generated/prisma" if a typed Role is needed.
+</interfaces>
+</context>
+
+<tasks>
+
+<task type="auto" tdd="false">
+  <name>Task 1: NextAuth v5 config, route handlers, and TypeScript role augmentation</name>
+  <read_first>
+    - .planning/phases/01-foundation-auth/01-RESEARCH.md (Pattern 2: auth.ts; Pattern 3: route; Pattern 5: augmentation; Pitfalls 3, 5)
+    - /home/petros/Github/cigma-points/src/lib/db.ts
+    - /home/petros/Github/cigma-points/tsconfig.json
+  </read_first>
+  <action>
+    Create `src/auth.ts` per RESEARCH Pattern 2:
+    - `export const { handlers, auth, signIn, signOut } = NextAuth({ ... })`.
+    - adapter: `PrismaAdapter(db)` from "@auth/prisma-adapter", db from "@/lib/db".
+    - session: `{ strategy: "jwt" }` (AUTH-03 — JWT persists across refresh in HTTP-only cookie).
+    - pages: `{ signIn: "/sign-in" }`.
+    - providers: Credentials with email + password fields. In `authorize(credentials)`: validate email format and non-empty password (ASVS V5 input validation) BEFORE the DB query; `db.user.findUnique({ where: { email } })`; return null if no user or no user.password; `bcrypt.compare(password, user.password)`; return null if invalid; else return the user.
+    - callbacks.jwt({ token, user }): `if (user) token.role = user.role` (AUTH-04).
+    - callbacks.session({ session, token }): `if (session.user) session.user.role = token.role` and also copy `token.sub` -> `session.user.id` so tRPC getMe (Plan 4) can look the user up by id.
+    - DO NOT use `satisfies AuthConfig` (Pitfall 3).
+
+    [OPEN RISK — verify first, per RESEARCH Open Question 1 + Assumption A1]: `@auth/prisma-adapter@2.11.2` may internally import from `@prisma/client`, which is incompatible with Prisma v7's custom output path. Before finalizing, confirm `npx tsc --noEmit` passes with the adapter wired. If the adapter throws import/type errors referencing @prisma/client, document it in the SUMMARY and apply the research fallback: pin Prisma to v6 (downgrade prisma + @prisma/client to ^6, restore `prisma-client-js` generator + datasource url, re-run generate/push). Do not silently work around it.
+
+    Create `src/app/api/auth/[...nextauth]/route.ts` (Pattern 3): `import { handlers } from "@/auth"; export const { GET, POST } = handlers`.
+
+    Create `next-auth.d.ts` at PROJECT ROOT (Pattern 5 — NOT inside src/): augment `next-auth` module Session (user.role: string + DefaultSession["user"]), User (role: string, password?: string | null), and `next-auth/jwt` module JWT (role: string). Add the file to tsconfig.json `include` array if the glob does not already cover root-level .d.ts files.
+  </action>
+  <verify>
+    <automated>cd /home/petros/Github/cigma-points && grep -q 'PrismaAdapter' src/auth.ts && grep -q 'strategy: "jwt"' src/auth.ts && ! grep -q 'satisfies AuthConfig' src/auth.ts && grep -q 'token.role' src/auth.ts && test -f next-auth.d.ts && grep -q 'role' next-auth.d.ts && grep -q 'export const { GET, POST }' 'src/app/api/auth/[...nextauth]/route.ts' && npx tsc --noEmit && echo OK</automated>
+  </verify>
+  <acceptance_criteria>
+    - src/auth.ts exports handlers, auth, signIn, signOut from NextAuth({...})
+    - src/auth.ts uses PrismaAdapter and session strategy "jwt"
+    - src/auth.ts does NOT contain `satisfies AuthConfig`
+    - jwt callback copies user.role to token; session callback copies token.role to session.user.role and token.sub to session.user.id
+    - next-auth.d.ts exists at project root and augments role on Session/User/JWT
+    - route.ts exports GET and POST from handlers
+    - `npx tsc --noEmit` passes (adapter+Prisma v7 compatibility confirmed, or fallback applied + documented)
+  </acceptance_criteria>
+  <done>NextAuth v5 fully configured with role-aware JWT, mounted at the API route, and types augmented. Adapter/Prisma-v7 compatibility resolved.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2: Registration (signUp server action + register route), auth helpers, and admin middleware</name>
+  <read_first>
+    - .planning/phases/01-foundation-auth/01-RESEARCH.md (Pattern 4: middleware; Pattern 8: signUp action; Pitfall 4: matcher + server re-check)
+    - /home/petros/Github/cigma-points/src/auth.ts
+    - /home/petros/Github/cigma-points/src/lib/db.ts
+  </read_first>
+  <action>
+    Create `src/lib/actions/auth.ts` (Pattern 8) as a `"use server"` module exporting `signUp(formData: FormData)` (AUTH-01): read name/email/password; validate email format + password length >= 8 (ASVS V5); `db.user.findUnique` to reject duplicate email; `bcrypt.hash(password, 12)`; `db.user.create({ data: { email, password: hashed, name, role: "USER" } })`; then `await signIn("credentials", { email, password, redirectTo: "/" })` for auto sign-in. Return a typed error result on validation/duplicate failure instead of throwing where the form needs to display it.
+
+    Create `src/app/api/auth/register/route.ts` as a POST handler that accepts JSON { name, email, password }, reuses the same hash+create logic (extract a shared `createUser` helper if cleaner), returns 201 on success, 409 on duplicate email, 400 on invalid input. (NextAuth v5 has no built-in registration — research note.)
+
+    Create `src/lib/auth-helpers.ts` exporting `requireSession()` (calls auth(), redirects to /sign-in if no session) and `requireAdmin()` (calls auth(), redirects to / if role !== "ADMIN"). These are the server-side re-check primitives (Pitfall 4 — middleware is not the only gate; admin tRPC procedures in Plan 4 also re-check).
+
+    Create `src/middleware.ts` (Pattern 4): `export default auth((req) => {...})`. Inside: read pathname; isLoggedIn = !!req.auth; isAdmin = req.auth?.user?.role === "ADMIN". Redirect unauthenticated users to /sign-in (allow /sign-in and /sign-up through). Redirect non-admins hitting /admin* to /. Export `config.matcher` excluding `/api/auth`, `_next/static`, `_next/image`, `favicon.ico` (Pitfall 4 — keep other api routes covered; admin tRPC still re-checks server-side).
+  </action>
+  <verify>
+    <automated>cd /home/petros/Github/cigma-points && grep -q '"use server"' src/lib/actions/auth.ts && grep -q 'bcrypt.hash' src/lib/actions/auth.ts && grep -q 'export default auth' src/middleware.ts && grep -q 'ADMIN' src/middleware.ts && grep -q 'matcher' src/middleware.ts && test -f src/app/api/auth/register/route.ts && grep -q 'requireAdmin' src/lib/auth-helpers.ts && npx tsc --noEmit && echo OK</automated>
+  </verify>
+  <acceptance_criteria>
+    - src/lib/actions/auth.ts is a "use server" module that hashes with bcrypt cost 12, rejects duplicate emails, creates a USER, and auto signs in
+    - src/app/api/auth/register/route.ts returns 201 success / 409 duplicate / 400 invalid
+    - src/lib/auth-helpers.ts exports requireSession and requireAdmin
+    - src/middleware.ts uses `export default auth(...)`, redirects non-admins from /admin to /, and redirects unauthenticated users to /sign-in
+    - middleware config.matcher excludes /api/auth and Next internals
+    - `npx tsc --noEmit` passes
+  </acceptance_criteria>
+  <done>Registration path complete (action + API route), server-side guards available, and edge middleware enforces auth + admin role across the app.</done>
+</task>
+
+</tasks>
+
+<threat_model>
+## Trust Boundaries
+
+| Boundary | Description |
+|----------|-------------|
+| browser -> credentials authorize() | Untrusted email/password input |
+| browser -> /admin routes | Privilege boundary (USER vs ADMIN) |
+| browser -> JWT cookie | Session token must be tamper-resistant |
+
+## STRIDE Threat Register
+
+| Threat ID | Category | Component | Disposition | Mitigation Plan |
+|-----------|----------|-----------|-------------|-----------------|
+| T-01-05 | Spoofing | credentials authorize() | mitigate | bcrypt.compare timing-safe; validate email/password before DB query (ASVS V2/V5) |
+| T-01-06 | Elevation of Privilege | /admin route access | mitigate | middleware checks req.auth.user.role==="ADMIN" AND requireAdmin() re-checks server-side (Pitfall 4) |
+| T-01-07 | Elevation of Privilege | JWT token theft | mitigate | NextAuth JWT in HTTP-only cookie, Secure+SameSite=Lax defaults (ASVS V3) |
+| T-01-08 | Information Disclosure | password at rest | mitigate | bcrypt.hash(password,12) in signUp; password field never returned to client (ASVS V6) |
+| T-01-09 | Spoofing | brute force / credential stuffing | accept | Rate limiting deferred to v2 (Upstash); NextAuth default error handling for MVP |
+</threat_model>
+
+<verification>
+- `npx tsc --noEmit` passes (confirms adapter+v7 compatibility and module augmentation).
+- After dev server is up (Plan 4 provides pages), the Plan 1 E2E specs `tests/e2e/auth.spec.ts` and `tests/e2e/admin-guard.spec.ts` turn green: `npx playwright test`.
+- Curling `/api/auth/register` with a new email returns 201; duplicate returns 409.
+</verification>
+
+<success_criteria>
+- AUTH-01: registration creates a hashed-password user and auto signs in.
+- AUTH-02: credentials login works via NextAuth.
+- AUTH-03: JWT session strategy persists across refresh.
+- AUTH-04: middleware + requireAdmin enforce ADMIN-only /admin access.
+- @auth/prisma-adapter confirmed working with Prisma v7 (or v6 fallback applied + documented).
+</success_criteria>
+
+<output>
+Create `.planning/phases/01-foundation-auth/01-03-SUMMARY.md` when done.
+</output>

@@ -1,0 +1,226 @@
+---
+phase: 01-foundation-auth
+plan: 4
+type: execute
+wave: 3
+depends_on: ["01-1", "01-2"]
+files_modified:
+  - src/trpc/init.ts
+  - src/trpc/query-client.ts
+  - src/trpc/client.tsx
+  - src/trpc/server.tsx
+  - src/trpc/routers/_app.ts
+  - src/trpc/routers/user.ts
+  - src/app/api/trpc/[trpc]/route.ts
+  - src/app/layout.tsx
+  - src/app/page.tsx
+  - src/app/(auth)/sign-in/page.tsx
+  - src/app/(auth)/sign-up/page.tsx
+  - src/app/admin/page.tsx
+  - src/components/nav/header.tsx
+  - src/components/providers.tsx
+autonomous: false
+requirements: [AUTH-01, AUTH-02, AUTH-03]
+
+must_haves:
+  truths:
+    - "A user can reach a sign-up page, submit, and become signed in"
+    - "A user can reach a sign-in page and log in"
+    - "The nav shell (header) renders on every page with sign-in/out + CP balance"
+    - "tRPC user.getMe returns the signed-in user from the DB (DB->tRPC->UI proven)"
+    - "An /admin placeholder page renders for admins (gated by Plan 3 middleware)"
+  artifacts:
+    - path: "src/trpc/routers/user.ts"
+      provides: "user.getMe protected procedure — Walking Skeleton DB read"
+      contains: "getMe"
+    - path: "src/app/api/trpc/[trpc]/route.ts"
+      provides: "tRPC fetch handler"
+    - path: "src/app/layout.tsx"
+      provides: "Root layout with providers + nav shell"
+    - path: "src/components/nav/header.tsx"
+      provides: "Navigation shell header"
+    - path: "src/app/(auth)/sign-in/page.tsx"
+      provides: "Sign-in form"
+    - path: "src/app/(auth)/sign-up/page.tsx"
+      provides: "Sign-up form"
+    - path: "src/app/admin/page.tsx"
+      provides: "Admin placeholder page"
+  key_links:
+    - from: "src/trpc/routers/user.ts"
+      to: "src/lib/db.ts"
+      via: "db.user.findUnique"
+      pattern: "db\\.user"
+    - from: "src/components/nav/header.tsx"
+      to: "trpc user.getMe"
+      via: "useTRPC query for CP balance"
+      pattern: "getMe"
+    - from: "src/app/(auth)/sign-up/page.tsx"
+      to: "src/lib/actions/auth.ts"
+      via: "signUp server action"
+      pattern: "signUp"
+---
+
+<objective>
+Build the tRPC v11 layer, the navigation shell, and the auth pages (sign-in, sign-up, admin placeholder), wiring the whole stack together. The `user.getMe` procedure proves the DB->tRPC->UI chain. After this plan the Walking Skeleton is complete end-to-end and the Plan 1 E2E specs pass.
+
+Purpose: Deliver the user-facing surface (AUTH-01/02/03 UI) and the type-safe data layer, completing the vertical slice from database to rendered page.
+Output: 5-file tRPC scaffold + user.getMe, root layout with providers + header, sign-in/sign-up pages, admin placeholder.
+</objective>
+
+<execution_context>
+@$HOME/.claude/get-shit-done/workflows/execute-plan.md
+@$HOME/.claude/get-shit-done/templates/summary.md
+</execution_context>
+
+<context>
+@.planning/PROJECT.md
+@.planning/ROADMAP.md
+@.planning/phases/01-foundation-auth/01-RESEARCH.md
+
+<interfaces>
+<!-- From RESEARCH.md Pattern 7 (tRPC v11) + project structure. Package: @trpc/tanstack-react-query (v11). -->
+
+5-file tRPC scaffold:
+  src/trpc/init.ts       -> createTRPCContext (reads auth()), createTRPCRouter, publicProcedure, protectedProcedure; transformer: superjson
+  src/trpc/query-client.ts -> makeQueryClient() factory
+  src/trpc/client.tsx    -> "use client" TRPCReactProvider + useTRPC hook (from @trpc/tanstack-react-query)
+  src/trpc/server.tsx    -> server-side caller + HydrateClient + prefetch helpers
+  src/trpc/routers/_app.ts -> appRouter = createTRPCRouter({ user: userRouter })
+
+protectedProcedure throws UNAUTHORIZED if !ctx.session?.user.
+
+Consumed from Plan 2 & 3 (already exist):
+  import { db } from "@/lib/db"
+  import { auth, signIn, signOut } from "@/auth"
+  import { signUp } from "@/lib/actions/auth"
+  session.user.id is set (Plan 3 session callback copies token.sub)
+
+shadcn components available in src/components/ui/: button, input, label, card, form, avatar, dropdown-menu.
+</interfaces>
+</context>
+
+<tasks>
+
+<task type="auto" tdd="false">
+  <name>Task 1: tRPC v11 scaffold + user.getMe + route handler + providers</name>
+  <read_first>
+    - .planning/phases/01-foundation-auth/01-RESEARCH.md (Pattern 7: tRPC v11 setup)
+    - /home/petros/Github/cigma-points/src/lib/db.ts
+    - /home/petros/Github/cigma-points/src/auth.ts
+  </read_first>
+  <action>
+    Build the tRPC v11 5-file scaffold (RESEARCH Pattern 7), using `@trpc/tanstack-react-query` (v11 — NOT @trpc/react-query) and superjson transformer:
+
+    - `src/trpc/init.ts`: `createTRPCContext` = async () => ({ session: await auth() }); `initTRPC.context<...>().create({ transformer: superjson })`; export createTRPCRouter, publicProcedure, and protectedProcedure (throws TRPCError UNAUTHORIZED if no ctx.session?.user, narrows ctx.session non-null).
+    - `src/trpc/query-client.ts`: makeQueryClient() returning a configured TanStack QueryClient (superjson-aware dehydrate/hydrate).
+    - `src/trpc/client.tsx`: "use client" — TRPCReactProvider wrapping QueryClientProvider + the tRPC client (httpBatchLink to /api/trpc, superjson transformer); export the useTRPC hook.
+    - `src/trpc/server.tsx`: server-side trpc caller + HydrateClient + prefetch helper for Server Components.
+    - `src/trpc/routers/user.ts`: `userRouter` with `getMe` protectedProcedure querying `db.user.findUnique({ where: { id: ctx.session.user.id }, select: { id, name, email, role, cigmaPoints, image, bio } })` (RESEARCH Pattern 7 — the Walking Skeleton DB read).
+    - `src/trpc/routers/_app.ts`: `appRouter = createTRPCRouter({ user: userRouter })`; export `type AppRouter`.
+
+    Create `src/app/api/trpc/[trpc]/route.ts`: fetchRequestHandler mounting appRouter at /api/trpc for GET + POST, passing createTRPCContext.
+
+    Create `src/components/providers.tsx`: "use client" composing SessionProvider (from next-auth/react) + TRPCReactProvider so all client components can read session and call tRPC.
+  </action>
+  <verify>
+    <automated>cd /home/petros/Github/cigma-points && test -f src/trpc/init.ts && test -f src/trpc/client.tsx && test -f src/trpc/server.tsx && grep -q 'getMe' src/trpc/routers/user.ts && grep -q 'db.user' src/trpc/routers/user.ts && grep -q 'superjson' src/trpc/init.ts && test -f 'src/app/api/trpc/[trpc]/route.ts' && npx tsc --noEmit && echo OK</automated>
+  </verify>
+  <acceptance_criteria>
+    - All 5 tRPC files exist (init.ts, query-client.ts, client.tsx, server.tsx, routers/_app.ts) plus routers/user.ts
+    - init.ts uses superjson transformer and exposes protectedProcedure that throws UNAUTHORIZED
+    - user.getMe queries db.user.findUnique by ctx.session.user.id
+    - src/app/api/trpc/[trpc]/route.ts mounts the appRouter for GET and POST
+    - src/components/providers.tsx wraps SessionProvider + TRPCReactProvider
+    - `npx tsc --noEmit` passes
+  </acceptance_criteria>
+  <done>Type-safe tRPC layer live with a real authenticated DB read, mounted at the API route, providers ready for the UI.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2: Root layout + nav shell + sign-in/sign-up pages + admin placeholder</name>
+  <read_first>
+    - .planning/phases/01-foundation-auth/01-RESEARCH.md (Recommended Project Structure; shadcn components list)
+    - /home/petros/Github/cigma-points/src/lib/actions/auth.ts
+    - /home/petros/Github/cigma-points/src/auth.ts
+    - /home/petros/Github/cigma-points/src/components/providers.tsx
+  </read_first>
+  <action>
+    Update `src/app/layout.tsx` (root): wrap children in `<Providers>` (from src/components/providers.tsx) and render `<Header/>` above a `<main>` content area so the nav shell is consistent on every page (Success Criterion 4). Keep the Tailwind globals import.
+
+    Create `src/components/nav/header.tsx`: "use client" header with the app name "Cigma Points" linking to /, and a right side that uses useSession (or the useTRPC user.getMe query) to show: when signed in -> CP balance badge (cigmaPoints from getMe) + a dropdown-menu (shadcn) with the user email and a Sign out action (calls signOut); when signed out -> Sign in / Sign up links. Admin link to /admin shown only when role === "ADMIN" (decorative — real gate is middleware).
+
+    Create `src/app/page.tsx`: a simple authenticated home placeholder ("Welcome to Cigma Points") that, when signed in, prefetches/reads user.getMe to display the user's name — proving the DB->tRPC->UI chain visibly.
+
+    Create `src/app/(auth)/sign-up/page.tsx`: a Card with a form (shadcn form/input/label/button) for Name, Email, Password (type=password). Submit calls the `signUp` server action from "@/lib/actions/auth". Use getByLabel-friendly labels ("Name", "Email", "Password") matching the Plan 1 E2E specs. Show validation/duplicate errors returned by the action. Link to /sign-in.
+
+    Create `src/app/(auth)/sign-in/page.tsx`: a Card with Email + Password form. Submit calls `signIn("credentials", { email, password, redirectTo: "/" })` (import signIn from "@/auth" via a small server action, or use next-auth/react signIn client-side). Show an error on invalid credentials. Link to /sign-up.
+
+    Create `src/app/admin/page.tsx`: a placeholder admin page with a clear heading "Admin Dashboard" (the E2E admin-guard test asserts this heading for ADMIN users). Optionally call requireAdmin() from auth-helpers for defense-in-depth (Pitfall 4). Real admin features land in Phase 6.
+
+    After all files exist, run the full E2E suite from Plan 1 against the dev server.
+  </action>
+  <verify>
+    <automated>cd /home/petros/Github/cigma-points && test -f 'src/app/(auth)/sign-in/page.tsx' && test -f 'src/app/(auth)/sign-up/page.tsx' && test -f src/app/admin/page.tsx && test -f src/components/nav/header.tsx && grep -q 'signUp' 'src/app/(auth)/sign-up/page.tsx' && grep -q 'Providers' src/app/layout.tsx && grep -qi 'Admin Dashboard' src/app/admin/page.tsx && npx tsc --noEmit && echo OK</automated>
+  </verify>
+  <acceptance_criteria>
+    - src/app/layout.tsx wraps children in Providers and renders Header above main
+    - src/components/nav/header.tsx shows CP balance + sign-out when signed in, sign-in/sign-up links when signed out, /admin link only for ADMIN
+    - sign-up page form has Name/Email/Password labeled fields and calls signUp
+    - sign-in page form calls signIn with credentials
+    - src/app/admin/page.tsx renders an "Admin Dashboard" heading
+    - `npx tsc --noEmit` passes
+    - `npm run build` succeeds (no SSR/client boundary errors)
+  </acceptance_criteria>
+  <done>Full nav shell + auth pages + admin placeholder rendered; the entire Walking Skeleton runs end-to-end from sign-up through an authenticated DB-backed home page.</done>
+</task>
+
+<task type="checkpoint:human-verify" gate="blocking">
+  <what-built>The complete Walking Skeleton: sign-up, sign-in, JWT session with role, nav shell, tRPC user.getMe DB read, and admin route protection.</what-built>
+  <how-to-verify>
+    With `npm run dev` running on http://localhost:3000:
+    1. Visit /sign-up, create an account (name + email + password). Expect to land on / signed in, with your name shown and a CP balance in the header.
+    2. Refresh the page (AUTH-03). Expect to remain signed in.
+    3. Sign out via the header dropdown, then sign in again at /sign-in with the same credentials (AUTH-02). Expect to land on / signed in.
+    4. While signed in as your new (USER-role) account, navigate to /admin (AUTH-04). Expect to be redirected to /.
+    5. Sign in as the seeded admin (admin@cigma.local — password from the Plan 2 seed) and visit /admin. Expect to see the "Admin Dashboard" heading.
+    6. Confirm the automated E2E suite is green: `npx playwright test` (auth.spec.ts + admin-guard.spec.ts, 5 tests passing).
+  </how-to-verify>
+  <resume-signal>Type "approved" if all six checks pass, or describe what failed.</resume-signal>
+</task>
+
+</tasks>
+
+<threat_model>
+## Trust Boundaries
+
+| Boundary | Description |
+|----------|-------------|
+| browser -> tRPC /api/trpc | Untrusted requests to data procedures |
+| client component -> session | Role displayed in UI is decorative, not a gate |
+
+## STRIDE Threat Register
+
+| Threat ID | Category | Component | Disposition | Mitigation Plan |
+|-----------|----------|-----------|-------------|-----------------|
+| T-01-10 | Elevation of Privilege | tRPC procedures | mitigate | protectedProcedure throws UNAUTHORIZED without session; admin procedures (Phase 6) re-check role server-side (Pitfall 4) |
+| T-01-11 | Spoofing | client-side role check in header | accept | Header /admin link is decorative; real enforcement is middleware + requireAdmin (RESEARCH anti-pattern note) |
+| T-01-12 | Information Disclosure | user.getMe select | mitigate | getMe select excludes password field; returns only safe profile fields |
+</threat_model>
+
+<verification>
+- `npm run build` and `npx tsc --noEmit` pass.
+- `npx playwright test` — all 5 AUTH E2E tests green.
+- Manual checkpoint: full sign-up -> refresh -> sign-out -> sign-in -> admin-guard flow works.
+</verification>
+
+<success_criteria>
+- AUTH-01/02/03 UI complete: sign-up, sign-in, persistent session.
+- Nav shell consistent on every page (Success Criterion 4).
+- user.getMe proves DB->tRPC->UI chain.
+- /admin gated for non-admins (with Plan 3 middleware); admin sees dashboard.
+- Walking Skeleton end-to-end verified.
+</success_criteria>
+
+<output>
+Create `.planning/phases/01-foundation-auth/01-04-SUMMARY.md` when done.
+</output>
