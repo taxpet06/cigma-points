@@ -3,7 +3,7 @@
 // - Imports PrismaClient from the generated output path (not "@prisma/client") per Prisma v7.
 // - Follows the global singleton pattern to prevent connection exhaustion in Next.js dev hot-reload.
 // Source: https://neon.com/docs/guides/prisma (verified 2026-06-13)
-import { PrismaClient } from "../../prisma/generated/prisma"
+import { PrismaClient } from "../../prisma/generated/prisma/client"
 import { PrismaNeon } from "@prisma/adapter-neon"
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }

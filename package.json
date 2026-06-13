@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev && prisma generate",
+    "db:seed": "node --env-file=.env.local node_modules/.bin/tsx prisma/seed.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test"
   },
