@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The app renders a navigation shell (header, main content area) consistent across all pages
 **Plans**: 4 plans
 Plans:
-- [ ] 01-PLAN-1.md — Project scaffold + all Phase 1 deps + test infra + failing AUTH E2E specs
-- [ ] 01-PLAN-2.md — Prisma v7 schema + Neon config + [BLOCKING] db push + seed proof
-- [ ] 01-PLAN-3.md — NextAuth v5 (credentials, JWT role claim) + registration + admin middleware
-- [ ] 01-PLAN-4.md — tRPC v11 scaffold + user.getMe + nav shell + sign-in/sign-up/admin pages
+- [ ] 01-01-PLAN.md — Project scaffold + all Phase 1 deps + test infra + failing AUTH E2E specs
+- [ ] 01-02-PLAN.md — Prisma v7 schema + Neon config + [BLOCKING] db push + seed proof
+- [ ] 01-03-PLAN.md — NextAuth v5 (credentials, JWT role claim) + registration + admin middleware
+- [ ] 01-04-PLAN.md — tRPC v11 scaffold + user.getMe + nav shell + sign-in/sign-up/admin pages
 
 ### Phase 2: User Profiles
 **Goal**: Users have a public identity — display name, avatar, bio — and any user can view another user's CP balance and post history
