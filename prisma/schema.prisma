@@ -1,0 +1,206 @@
+// Prisma v7 schema — uses "prisma-client" provider with explicit output path.
+// The datasource block has NO url property in v7; the migration URL comes from
+// prisma.config.ts via env("DIRECT_URL"). Runtime queries use DATABASE_URL
+// via the PrismaNeon adapter configured in src/lib/db.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // No url property — configured via prisma.config.ts (Prisma v7 pattern)
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PostType {
+  AWARD
+  DEDUCT
+  TASK
+}
+
+enum VoteType {
+  AGREE
+  DISAGREE
+}
+
+enum CompletionStatus {
+  PENDING
+  AWARDED
+}
+
+// ---------------------------------------------------------------------------
+// NextAuth models
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  bio           String?
+  password      String?   // null for OAuth users
+
+  role        Role @default(USER)
+  cigmaPoints Int  @default(0)
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  posts            Post[]           @relation("author")
+  receivedPosts    Post[]           @relation("target")
+  votes            Vote[]
+  replies          Reply[]
+  tasksCreated     Task[]
+  taskCompletions  TaskCompletion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// App models
+// ---------------------------------------------------------------------------
+
+model Post {
+  id           String   @id @default(cuid())
+  authorId     String
+  targetUserId String
+  type         PostType
+  title        String
+  explanation  String
+  cpAmount     Int
+  mediaUrl     String?
+  settled      Boolean  @default(false)
+  outcome      String?  // "Awarded" | "Rejected" | null until settled
+  votingEndsAt DateTime
+
+  author     User   @relation("author", fields: [authorId], references: [id])
+  targetUser User   @relation("target", fields: [targetUserId], references: [id])
+  votes      Vote[]
+  replies    Reply[]
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model Vote {
+  id     String   @id @default(cuid())
+  postId String
+  userId String
+  type   VoteType
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId]) // one vote per user per post (VOTE-01)
+  @@map("votes")
+}
+
+model Reply {
+  id       String  @id @default(cuid())
+  postId   String
+  parentId String?
+  authorId String
+  content  String
+  mediaUrl String?
+
+  post     Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   Reply?  @relation("nested", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Reply[] @relation("nested")
+  author   User    @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("replies")
+}
+
+model Task {
+  id          String  @id @default(cuid())
+  adminId     String
+  title       String
+  description String
+  mediaUrl    String?
+  cpReward    Int?
+
+  admin       User             @relation(fields: [adminId], references: [id])
+  completions TaskCompletion[]
+
+  createdAt DateTime @default(now())
+
+  @@map("tasks")
+}
+
+model TaskCompletion {
+  id         String           @id @default(cuid())
+  taskId     String
+  userId     String
+  status     CompletionStatus @default(PENDING)
+  awardedCp  Int?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@map("task_completions")
+}
