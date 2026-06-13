@@ -12,7 +12,7 @@ Cigma Points ships in six vertical phases, each delivering a complete, testable 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation + Auth** - Project scaffold, Prisma schema, NextAuth v5, role middleware, layout/nav shell
+- [x] **Phase 1: Foundation + Auth** - Project scaffold, Prisma schema, NextAuth v5, role middleware, layout/nav shell (completed 2026-06-13)
 - [ ] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history
 - [ ] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards
 - [ ] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display
@@ -35,8 +35,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold + all Phase 1 deps + test infra + failing AUTH E2E specs
 - [x] 01-02-PLAN.md — Prisma v7 schema + Neon config + [BLOCKING] db push + seed proof
-- [ ] 01-03-PLAN.md — NextAuth v5 (credentials, JWT role claim) + registration + admin middleware
-- [ ] 01-04-PLAN.md — tRPC v11 scaffold + user.getMe + nav shell + sign-in/sign-up/admin pages
+- [x] 01-03-PLAN.md — NextAuth v5 (credentials, JWT role claim) + registration + admin middleware
+- [x] 01-04-PLAN.md — tRPC v11 scaffold + user.getMe + nav shell + sign-in/sign-up/admin pages
 
 ### Phase 2: User Profiles
 **Goal**: Users have a public identity — display name, avatar, bio — and any user can view another user's CP balance and post history
@@ -108,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Auth | 2/4 | In Progress|  |
+| 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
 | 2. User Profiles | 0/TBD | Not started | - |
 | 3. Posts + Feed | 0/TBD | Not started | - |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
