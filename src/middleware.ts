@@ -11,10 +11,11 @@
 //     and Next.js static internals. Other /api/* routes ARE covered so API-level
 //     admin checks still pass through requireAdmin() on the server.
 
-import { auth } from "@/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "@/auth.config"
 import { NextResponse } from "next/server"
 
-export default auth((req) => {
+export default NextAuth(authConfig).auth((req) => {
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth
   const isAdmin = req.auth?.user?.role === "ADMIN"
