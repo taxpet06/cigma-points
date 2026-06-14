@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "/snap/node/current/bin/node node_modules/.bin/next dev",
+    "build": "/snap/node/current/bin/node node_modules/.bin/next build",
+    "start": "/snap/node/current/bin/node node_modules/.bin/next start",
     "lint": "eslint",
     "db:push": "tsx node_modules/.bin/prisma db push",
     "db:generate": "tsx node_modules/.bin/prisma generate",
