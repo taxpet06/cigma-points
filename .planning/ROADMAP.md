@@ -63,7 +63,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — shared PostCard component + Sent/Received post-history tabs
+- [x] 02-02-PLAN.md — shared PostCard component + Sent/Received post-history tabs
 - [ ] 02-03-PLAN.md — /profile/edit (owner-gated) + avatar upload + bio editor with 160-char counter
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
-| 2. User Profiles | 1/4 | In Progress|  |
+| 2. User Profiles | 2/4 | In Progress|  |
 | 3. Posts + Feed | 0/TBD | Not started | - |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
 | 5. Threads + Replies | 0/TBD | Not started | - |
