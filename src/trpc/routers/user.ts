@@ -107,11 +107,12 @@ export const userRouter = createTRPCRouter({
 
   /**
    * Returns a user's public profile fields by username.
+   * Public: any visitor (authenticated or not) may call this procedure.
    * Select is explicit — never password or email (T-02-04).
    * Throws NOT_FOUND when username doesn't exist.
    */
-  getProfile: protectedProcedure
-    .input(z.object({ username: z.string() }))
+  getProfile: publicProcedure
+    .input(z.object({ username: usernameSchema }))
     .query(async ({ input }) => {
       const user = await db.user.findUnique({
         where: { username: input.username },
@@ -130,11 +131,13 @@ export const userRouter = createTRPCRouter({
 
   /**
    * Returns cursor-based paginated post history for a user.
+   * Public: any visitor (authenticated or not) may query any userId — intentional for public profiles.
+   * If private posts are introduced in a future phase, add a visibility filter here.
    * tab="sent"     → posts where authorId = userId
    * tab="received" → posts where targetUserId = userId
    * Returns { items, nextCursor } for TanStack Query infiniteQueryOptions.
    */
-  getPostHistory: protectedProcedure
+  getPostHistory: publicProcedure
     .input(
       z.object({
         userId: z.string(),
