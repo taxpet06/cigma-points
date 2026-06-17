@@ -3,9 +3,11 @@
 
 import { createTRPCRouter } from "@/trpc/init"
 import { userRouter } from "@/trpc/routers/user"
+import { postRouter } from "@/trpc/routers/post"
 
 export const appRouter = createTRPCRouter({
   user: userRouter,
+  post: postRouter,
 })
 
 // Export type only — client-side code imports this for type inference
