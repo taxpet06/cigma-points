@@ -88,11 +88,12 @@ export const userRouter = createTRPCRouter({
    * Updates the current user's display name, bio, and/or avatar image.
    * Input schema deliberately omits role, cigmaPoints, and userId (T-02-02 mass-assignment guard).
    * User ID is sourced from the session — never from client input (IDOR prevention).
+   * name/bio/image are all optional (partial updates allowed), but when provided, name must be non-empty.
    */
   updateProfile: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1).max(50).optional(),
+        name: z.string().trim().min(1).max(50).optional(),
         bio: z.string().max(160, "Bio cannot exceed 160 characters").optional(),
         image: z.string().url().optional(),
       })
