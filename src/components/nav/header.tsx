@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserCircle } from "lucide-react"
 
 export function Header() {
   const { data: session, status } = useSession()
@@ -71,24 +72,38 @@ export function Header() {
                 </Link>
               )}
 
-              {/* User dropdown */}
+              {/* Avatar — primary action: link to own profile (D-10).
+                  href: /u/[username] when username set; /profile/edit when null (D-10).
+                  Fallback: UserCircle icon — NO initials (D-11).
+                  aria-label for accessibility (UI-SPEC Accessibility Contract). */}
+              <Link
+                href={me?.username ? `/u/${me.username}` : "/profile/edit"}
+                aria-label="View your profile"
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-zinc-400"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={me?.image ?? undefined}
+                    alt={me?.name ?? "User"}
+                  />
+                  <AvatarFallback>
+                    {/* D-11: UserCircle fallback — NO initials anywhere */}
+                    <UserCircle
+                      className="h-full w-full text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+
+              {/* User dropdown (email + sign out) — separate trigger */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="rounded-full focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                    className="text-xs text-zinc-500 hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 rounded px-1"
                     aria-label="User menu"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={session.user.image ?? undefined}
-                        alt={session.user.name ?? "User"}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {(session.user.name ?? session.user.email ?? "U")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    ▾
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">

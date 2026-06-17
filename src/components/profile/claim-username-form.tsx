@@ -17,7 +17,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useTRPC } from "@/trpc/client"
 import { usernameSchema } from "@/lib/validation/username"
@@ -42,6 +42,7 @@ type ClaimUsernameValues = z.infer<typeof claimUsernameFormSchema>
 export function ClaimUsernameForm() {
   const trpc = useTRPC()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const form = useForm<ClaimUsernameValues>({
     resolver: zodResolver(claimUsernameFormSchema),
@@ -55,7 +56,9 @@ export function ClaimUsernameForm() {
   async function onSubmit(values: ClaimUsernameValues) {
     try {
       const result = await claimUsername.mutateAsync({ username: values.username })
-      // On success, navigate to the new profile URL (D-03)
+      // On success, invalidate getMe so the nav header avatar link updates to /u/[username]
+      await queryClient.invalidateQueries(trpc.user.getMe.queryFilter())
+      // Navigate to the new profile URL (D-03)
       if (result.username) {
         router.push(`/u/${result.username}`)
       }

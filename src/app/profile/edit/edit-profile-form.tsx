@@ -56,9 +56,10 @@ export function EditProfileForm() {
     defaultValues: { name: "", bio: "" },
   })
 
-  // Pre-populate once getMe loads.
+  // Pre-populate once getMe loads — only if the form hasn't been modified by the user.
+  // This prevents overwriting user input when getMe resolves after typing has started.
   useEffect(() => {
-    if (me) {
+    if (me && !form.formState.isDirty) {
       form.reset({
         name: me.name ?? "",
         bio: me.bio ?? "",
