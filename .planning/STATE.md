@@ -1,90 +1,172 @@
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: verifying
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-17T17:53:37.048Z"
-last_activity: 2026-06-17
-progress:
-  total_phases: 6
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-  percent: 33
----
+# Roadmap: Cigma Points
 
-# Project State
+## Overview
 
-## Project Reference
+Cigma Points ships in six vertical phases, each delivering a complete, testable user capability. Phase 1 lays the foundation (auth, schema, nav shell). Phases 2–5 build the core social loop — profiles, posts, voting with automatic settlement, and threaded replies. Phase 6 closes the loop with the admin panel and Task Post workflow. Every phase depends only on the phase before it, and every v1 requirement lands in exactly one phase.
 
-See: .planning/PROJECT.md (updated 2026-06-13)
+## Phases
 
-**Core value:** Users can recognize and hold each other accountable through transparent, community-verified point transfers
-**Current focus:** Phase 02 — user-profiles
+**Phase Numbering:**
 
-## Current Position
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-Phase: 02 (user-profiles) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-06-17
+Decimal phases appear between their surrounding integers in numeric order.
 
-Progress: [██████████] 100%
+- [x] **Phase 1: Foundation + Auth** - Project scaffold, Prisma schema, NextAuth v5, role middleware, layout/nav shell (completed 2026-06-13)
+- [x] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history (completed 2026-06-17)
+- [ ] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards
+- [ ] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display
+- [ ] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading
+- [ ] **Phase 6: Admin Panel + Tasks** - Admin user/balance table, Task Post creation, task reply review + CP award, Tasks tab
 
-## Performance Metrics
+## Phase Details
 
-**Velocity:**
+### Phase 1: Foundation + Auth
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+**Goal**: Users can securely create accounts and log in; admin role is enforced throughout the app
+**Mode:** mvp
+**Depends on**: Nothing (first phase)
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
+**Success Criteria** (what must be TRUE):
 
-**By Phase:**
+  1. A new user can sign up with email and password and land on the app
+  2. A returning user can log in and their session persists across a browser refresh
+  3. An admin user visiting any admin route is granted access; a regular user attempting the same is blocked
+  4. The app renders a navigation shell (header, main content area) consistent across all pages
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+**Plans**: 4 plans
+Plans:
 
-**Recent Trend:**
+- [x] 01-01-PLAN.md — Project scaffold + all Phase 1 deps + test infra + failing AUTH E2E specs
+- [x] 01-02-PLAN.md — Prisma v7 schema + Neon config + [BLOCKING] db push + seed proof
+- [x] 01-03-PLAN.md — NextAuth v5 (credentials, JWT role claim) + registration + admin middleware
+- [x] 01-04-PLAN.md — tRPC v11 scaffold + user.getMe + nav shell + sign-in/sign-up/admin pages
 
-- Last 5 plans: —
-- Trend: —
+### Phase 2: User Profiles
 
-*Updated after each plan completion*
-| Phase 01-foundation-auth P02 | 26 minutes | 2 tasks | 4 files |
-| Phase 02-user-profiles P03 | 20 minutes | 2 tasks | 5 files |
-| Phase 02-user-profiles P04 | 35 minutes | 2 tasks | 8 files |
+**Goal**: Users have a public identity — display name, avatar, bio — and any user can view another user's CP balance and post history
+**Mode:** mvp
+**Depends on**: Phase 1
+**Requirements**: PROF-01, PROF-02, PROF-03
+**Success Criteria** (what must be TRUE):
 
-## Accumulated Context
+  1. A user's display name and avatar appear on their profile page and on any content they author
+  2. A user can write and save a short bio that is visible on their public profile
+  3. Any authenticated user can visit another user's profile and see their current CP balance and post history
 
-### Decisions
+**Plans**: 4 plans
+Plans:
+**Wave 1**
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+- [x] 02-01-PLAN.md — username migration + tRPC procedures (claim/update/get profile, post history) + Uploadthing route
 
-- Stack locked 2026-06-13: Next.js 15 + Neon + Prisma + NextAuth v5 + tRPC + TanStack Query + Tailwind/shadcn + Uploadthing + Vercel Cron + Vitest/Playwright + Sentry
-- Vote settlement is the highest-risk component — atomic Prisma transaction, CRON_SECRET env var, 50-post batch limit to stay within Vercel 10s function timeout
-- [Phase ?]: UserCircle fallback across all avatar contexts
+**Wave 2** *(blocked on Wave 1 completion)*
 
-### Pending Todos
+- [x] 02-02-PLAN.md — shared PostCard component + Sent/Received post-history tabs
+- [x] 02-03-PLAN.md — /profile/edit (owner-gated) + avatar upload + bio editor with 160-char counter
 
-None yet.
+**Wave 3** *(blocked on Wave 2 completion)*
 
-### Blockers/Concerns
+- [x] 02-04-PLAN.md — /u/[username] public profile + claim-username form + nav avatar wiring + E2E
 
-None yet.
+**UI hint**: yes
 
-## Deferred Items
+### Phase 3: Posts + Feed
 
-Items acknowledged and carried forward from previous milestone close:
+**Goal**: Users can create award and deduct posts with optional media, and all posts appear in a public scrollable feed ordered by recency
+**Mode:** mvp
+**Depends on**: Phase 2
+**Requirements**: POST-01, POST-02, POST-03, POST-04
+**Success Criteria** (what must be TRUE):
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+  1. A user can create an award post by selecting a target user, specifying a CP amount, and adding a title and explanation
+  2. A user can create a deduct post using the same form fields
+  3. A user can attach an image, video, or GIF to a post before submitting
+  4. After submission, the post appears at the top of the public feed visible to all authenticated users
 
-## Session Continuity
+**Plans**: 4 plans
+Plans:
+**Wave 1**
 
-Last session: 2026-06-17T17:53:37.041Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: None
+- [ ] 03-01-PLAN.md — createPostSchema + postRouter (createPost, getFeed, searchUsers) + postMediaUploader
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — shadcn dialog install + FeedList (useInfiniteQuery + IntersectionObserver) + FeedSkeleton + FeedEmptyState + home page replacement
+
+**Wave 3** *(blocked on Wave 1 + Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — UserAutocomplete (debounced searchUsers) + CreatePostModal (Dialog + 6-field form + UploadButton) + CreatePostButton + wire into home page
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-04-PLAN.md — PostCard mediaUrl activation (img/video) + createPostSchema unit tests + E2E tests (POST-01, POST-02, POST-04)
+
+**Cross-cutting constraints:**
+- All three tRPC procedures are protectedProcedure — UNAUTHORIZED thrown before any DB access
+- authorId always sourced from ctx.session.user.id, never from client input (createPost + postMediaUploader)
+- Cache invalidation uses queryClient.invalidateQueries(trpc.post.getFeed.queryFilter()) — confirmed method name
+
+**UI hint**: yes
+
+### Phase 4: Voting + Settlement
+
+**Goal**: Authenticated users can vote agree/disagree on posts, vote counts are visible, and an automatic cron job settles posts after the voting window closes — awarding or withholding points atomically
+**Mode:** mvp
+**Depends on**: Phase 3
+**Requirements**: VOTE-01, VOTE-02, VOTE-03, VOTE-04
+**Success Criteria** (what must be TRUE):
+
+  1. An authenticated user can cast one agree or one disagree vote on any post they did not author, and cannot vote twice on the same post
+  2. Agree and disagree vote counts are visible on every post card in the feed
+  3. After a post's voting window closes, the Vercel Cron job settles it: if agrees exceed disagrees the target user's CP balance is updated; otherwise the request is rejected
+  4. Settled post cards display either "Awarded" or "Rejected" as their final outcome
+
+**Plans**: TBD
+
+### Phase 5: Threads + Replies
+
+**Goal**: Users can engage in threaded discussion on any award or deduct post, including media attachments and nested replies
+**Mode:** mvp
+**Depends on**: Phase 4
+**Requirements**: THRD-01, THRD-02, THRD-03
+**Success Criteria** (what must be TRUE):
+
+  1. A user can reply to any award or deduct post and their reply appears in a thread beneath the post
+  2. A user can attach an image, video, or GIF to a reply
+  3. A user can reply to an existing reply, creating a nested thread (Twitter-style)
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Admin Panel + Tasks
+
+**Goal**: Admins can manage user balances and create Task Posts; users can reply to tasks and admins can award CP for task completion; a dedicated Tasks tab surfaces task posts separately from the main feed
+**Mode:** mvp
+**Depends on**: Phase 5
+**Requirements**: ADMN-01, ADMN-02, ADMN-03, TASK-01, TASK-02, TASK-03
+**Success Criteria** (what must be TRUE):
+
+  1. An admin can view all users with their current CP balances in a table and directly edit any balance
+  2. An admin can create a Task Post with title, description, optional media, and optional CP reward amount
+  3. A Task Post appears in a dedicated Tasks tab, separate from the main award/deduct feed
+  4. A user can reply to a Task Post with text and any media attachment
+  5. An admin can review a user's Task Post reply and mark it complete, triggering a CP award to that user; the reply then shows "Awarded" status
+
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
+| 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
+| 3. Posts + Feed | 0/4 | Planned | - |
+| 4. Voting + Settlement | 0/TBD | Not started | - |
+| 5. Threads + Replies | 0/TBD | Not started | - |
+| 6. Admin Panel + Tasks | 0/TBD | Not started | - |

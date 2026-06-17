@@ -85,7 +85,29 @@ Plans:
   3. A user can attach an image, video, or GIF to a post before submitting
   4. After submission, the post appears at the top of the public feed visible to all authenticated users
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [x] 03-01-PLAN.md — createPostSchema + postRouter (createPost, getFeed, searchUsers) + postMediaUploader
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — shadcn dialog install + FeedList (useInfiniteQuery + IntersectionObserver) + FeedSkeleton + FeedEmptyState + home page replacement
+
+**Wave 3** *(blocked on Wave 1 + Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — UserAutocomplete (debounced searchUsers) + CreatePostModal (Dialog + 6-field form + UploadButton) + CreatePostButton + wire into home page
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-04-PLAN.md — PostCard mediaUrl activation (img/video) + createPostSchema unit tests + E2E tests (POST-01, POST-02, POST-04)
+
+**Cross-cutting constraints:**
+- All three tRPC procedures are protectedProcedure — UNAUTHORIZED thrown before any DB access
+- authorId always sourced from ctx.session.user.id, never from client input (createPost + postMediaUploader)
+- Cache invalidation uses queryClient.invalidateQueries(trpc.post.getFeed.queryFilter()) — confirmed method name
+
 **UI hint**: yes
 
 ### Phase 4: Voting + Settlement
@@ -144,7 +166,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
 | 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
-| 3. Posts + Feed | 0/TBD | Not started | - |
+| 3. Posts + Feed | 1/4 | In Progress|  |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
 | 5. Threads + Replies | 0/TBD | Not started | - |
 | 6. Admin Panel + Tasks | 0/TBD | Not started | - |
