@@ -135,7 +135,8 @@ export function PostCard({
         Pending
       </span>
     )
-  } else if (outcome === "Awarded" || outcome === "awarded") {
+  // Canonical outcome values written by the settlement logic: "Awarded" | "Rejected"
+  } else if (outcome === "Awarded") {
     outcomeBadge = (
       <span className="inline-flex items-center gap-1 text-sm text-emerald-600">
         <CheckCircle2 className="h-4 w-4" />
