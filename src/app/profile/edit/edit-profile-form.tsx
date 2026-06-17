@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils"
 
 // Exported so the TDD schema tests can import it once the GREEN phase is done.
 export const editProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(50, "Name cannot exceed 50 characters"),
+  name: z.string().trim().min(1, "Name is required").max(50, "Name cannot exceed 50 characters"),
   bio: z.string().max(160, "Bio cannot exceed 160 characters"),
 })
 
