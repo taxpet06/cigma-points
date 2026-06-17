@@ -1,4 +1,4 @@
-// TDD: RED phase — tests for the EditProfileForm Zod schema.
+// Tests for the EditProfileForm Zod schema.
 //
 // Behaviors under test:
 //   - Bio field rejects input over 160 characters (D-06, PROF-02)
@@ -8,19 +8,7 @@
 //   - Name field rejects input over 50 characters
 
 import { describe, it, expect } from "vitest"
-import { z } from "zod"
-
-// The schema mirrors what EditProfileForm will use.
-// Import from the form file once it is created — for now define it inline
-// so the test can run and fail on missing implementation.
-//
-// When EditProfileForm exports editProfileSchema, replace this with:
-//   import { editProfileSchema } from "@/app/profile/edit/edit-profile-form"
-
-const editProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(50, "Name cannot exceed 50 characters"),
-  bio: z.string().max(160, "Bio cannot exceed 160 characters"),
-})
+import { editProfileSchema } from "@/app/profile/edit/edit-profile-form"
 
 describe("editProfileSchema", () => {
   describe("bio field — 160 character limit (D-06)", () => {
