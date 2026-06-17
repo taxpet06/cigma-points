@@ -54,6 +54,16 @@ export const userRouter = createTRPCRouter({
   claimUsername: protectedProcedure
     .input(z.object({ username: usernameSchema }))
     .mutation(async ({ ctx, input }) => {
+      const existing = await db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { username: true },
+      })
+      if (existing?.username) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Username already claimed.",
+        })
+      }
       try {
         return await db.user.update({
           where: { id: ctx.session.user.id },
