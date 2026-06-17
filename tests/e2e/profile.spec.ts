@@ -82,9 +82,9 @@ test.describe("PROF-01: Display name and avatar visible on profile", () => {
     // Profile page shows the display name
     await expect(page.getByRole("heading", { name: name })).toBeVisible()
 
-    // Nav avatar now links to /u/[username]
+    // Nav avatar now links to /u/[username] — wait for getMe to refetch after claim
     const updatedNavAvatar = page.getByRole("link", { name: /view your profile/i })
-    await expect(updatedNavAvatar).toHaveAttribute("href", `/u/${username}`)
+    await expect(updatedNavAvatar).toHaveAttribute("href", `/u/${username}`, { timeout: 10000 })
   })
 })
 
