@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation + Auth** - Project scaffold, Prisma schema, NextAuth v5, role middleware, layout/nav shell (completed 2026-06-13)
 - [x] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history (completed 2026-06-17)
-- [ ] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards
+- [x] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards (completed 2026-06-17)
 - [ ] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display
 - [ ] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading
 - [ ] **Phase 6: Admin Panel + Tasks** - Admin user/balance table, Task Post creation, task reply review + CP award, Tasks tab
@@ -93,15 +93,15 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — shadcn dialog install + FeedList (useInfiniteQuery + IntersectionObserver) + FeedSkeleton + FeedEmptyState + home page replacement
+- [x] 03-02-PLAN.md — shadcn dialog install + FeedList (useInfiniteQuery + IntersectionObserver) + FeedSkeleton + FeedEmptyState + home page replacement
 
 **Wave 3** *(blocked on Wave 1 + Wave 2 completion)*
 
-- [ ] 03-03-PLAN.md — UserAutocomplete (debounced searchUsers) + CreatePostModal (Dialog + 6-field form + UploadButton) + CreatePostButton + wire into home page
+- [x] 03-03-PLAN.md — UserAutocomplete (debounced searchUsers) + CreatePostModal (Dialog + 6-field form + UploadButton) + CreatePostButton + wire into home page
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 03-04-PLAN.md — PostCard mediaUrl activation (img/video) + createPostSchema unit tests + E2E tests (POST-01, POST-02, POST-04)
+- [x] 03-04-PLAN.md — PostCard mediaUrl activation (img/video) + createPostSchema unit tests + E2E tests (POST-01, POST-02, POST-04)
 
 **Cross-cutting constraints:**
 - All three tRPC procedures are protectedProcedure — UNAUTHORIZED thrown before any DB access
@@ -166,7 +166,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
 | 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
-| 3. Posts + Feed | 1/4 | In Progress|  |
+| 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
 | 5. Threads + Replies | 0/TBD | Not started | - |
 | 6. Admin Panel + Tasks | 0/TBD | Not started | - |
