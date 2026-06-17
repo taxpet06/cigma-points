@@ -1,0 +1,167 @@
+// Post tRPC router — data layer for Phase 3.
+//
+// Procedures:
+//   createPost    — creates an AWARD or DEDUCT post; authorId always from session (never client input)
+//   getFeed       — cursor-based paginated feed of AWARD + DEDUCT posts ordered by createdAt desc
+//   searchUsers   — debounced autocomplete search; excludes self; only users with claimed username
+//
+// Security:
+//   T-03-01 — createPost: authorId = ctx.session.user.id (never from client input)
+//   T-03-02 — createPost: self-nomination guard (targetUserId === authorId → BAD_REQUEST)
+//   T-03-03 — createPost: target user verified to exist and have a username before db.post.create
+//   T-03-04 — createPost: votingEndsAt set server-side (Date.now() + 24h); absent from input schema
+//   T-03-05 — getFeed / searchUsers: protectedProcedure — UNAUTHORIZED before any DB access
+//   T-03-06 — searchUsers: excludes self (id: { not: callerId }); only username-claimed users
+
+import { z } from "zod"
+import { TRPCError } from "@trpc/server"
+import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
+import { db } from "@/lib/db"
+import { createPostSchema } from "@/lib/validation/post"
+
+export const postRouter = createTRPCRouter({
+  /**
+   * Creates an AWARD or DEDUCT post.
+   *
+   * Security:
+   * - authorId is always sourced from ctx.session.user.id — never from client input (T-03-01)
+   * - Self-nomination is blocked server-side before any DB write (T-03-02)
+   * - Target user must exist and have a claimed username (T-03-03)
+   * - votingEndsAt is computed server-side as Date.now() + 24h (T-03-04)
+   * - createPostSchema excludes settled, outcome, votingEndsAt, authorId (mass-assignment guard)
+   */
+  createPost: protectedProcedure
+    .input(createPostSchema)
+    .mutation(async ({ ctx, input }) => {
+      const authorId = ctx.session.user.id
+
+      // Server-side self-nomination block (T-03-02 / D-09)
+      if (input.targetUserId === authorId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You cannot nominate yourself.",
+        })
+      }
+
+      // Verify target user exists and has a claimed username (T-03-03 / D-10)
+      const targetUser = await db.user.findUnique({
+        where: { id: input.targetUserId },
+        select: { id: true, username: true },
+      })
+      if (!targetUser || !targetUser.username) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Target user not found.",
+        })
+      }
+
+      // votingEndsAt is server-set — never from client input (T-03-04 / D-11)
+      const votingEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+      return db.post.create({
+        data: {
+          authorId,
+          targetUserId: input.targetUserId,
+          type: input.type,
+          title: input.title,
+          explanation: input.explanation,
+          cpAmount: input.cpAmount,
+          mediaUrl: input.mediaUrl ?? null,
+          votingEndsAt,
+        },
+        // Explicit select — never return sensitive fields (T-03-01 guard)
+        select: { id: true, createdAt: true },
+      })
+    }),
+
+  /**
+   * Returns cursor-based paginated feed of AWARD and DEDUCT posts ordered by createdAt desc.
+   * Mirrors the getPostHistory cursor pattern from user.ts (take: limit+1, pop for nextCursor).
+   * TASK posts are excluded from the feed (handled separately in Phase 6).
+   * explanation included in select for PostCard preview — zero-cost, avoids a future schema change.
+   */
+  getFeed: protectedProcedure
+    .input(
+      z.object({
+        cursor: z.string().nullish(),
+        limit: z.number().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ input }) => {
+      const { cursor, limit } = input
+
+      const items = await db.post.findMany({
+        where: { type: { in: ["AWARD", "DEDUCT"] } },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          explanation: true,
+          cpAmount: true,
+          mediaUrl: true,
+          outcome: true,
+          settled: true,
+          votingEndsAt: true,
+          createdAt: true,
+          author: { select: { id: true, name: true, image: true, username: true } },
+          targetUser: { select: { id: true, name: true, image: true, username: true } },
+          _count: { select: { votes: true, replies: true } },
+        },
+      })
+
+      // Cursor pagination: if we got more than limit, pop the extra item and use its id as nextCursor
+      let nextCursor: string | undefined
+      if (items.length > limit) {
+        const nextItem = items.pop()!
+        nextCursor = nextItem.id
+      }
+
+      return { items, nextCursor }
+    }),
+
+  /**
+   * Returns autocomplete results for target user selection.
+   * Excludes the calling user (D-09) and only returns users with a claimed username (D-10).
+   * Searches by username and display name (case-insensitive LIKE query).
+   * Capped at 8 results for autocomplete dropdown performance.
+   *
+   * Performance note: `contains: mode: "insensitive"` generates ILIKE '%query%'. At MVP scale
+   * (hundreds of users) this is acceptable. If the user base grows to tens of thousands, add
+   * a @@index([username]) or switch to Postgres full-text search.
+   */
+  searchUsers: protectedProcedure
+    .input(
+      z.object({
+        query: z.string().min(1).max(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const callerId = ctx.session.user.id
+
+      return db.user.findMany({
+        where: {
+          AND: [
+            { id: { not: callerId } }, // exclude self (T-03-06 / D-09)
+            { username: { not: null } }, // only users with a claimed username (D-10)
+            {
+              OR: [
+                { username: { contains: input.query, mode: "insensitive" } },
+                { name: { contains: input.query, mode: "insensitive" } },
+              ],
+            },
+          ],
+        },
+        take: 8, // cap results for autocomplete dropdown
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          image: true,
+        },
+        orderBy: { username: "asc" },
+      })
+    }),
+})
