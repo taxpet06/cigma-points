@@ -14,7 +14,7 @@ Cigma Points ships in six vertical phases, each delivering a complete, testable 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation + Auth** - Project scaffold, Prisma schema, NextAuth v5, role middleware, layout/nav shell (completed 2026-06-13)
-- [ ] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history
+- [x] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history (completed 2026-06-17)
 - [ ] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards
 - [ ] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display
 - [ ] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading
@@ -68,7 +68,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-04-PLAN.md — /u/[username] public profile + claim-username form + nav avatar wiring + E2E
+- [x] 02-04-PLAN.md — /u/[username] public profile + claim-username form + nav avatar wiring + E2E
 
 **UI hint**: yes
 
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Auth | 4/4 | Complete   | 2026-06-13 |
-| 2. User Profiles | 3/4 | In Progress|  |
+| 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
 | 3. Posts + Feed | 0/TBD | Not started | - |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
 | 5. Threads + Replies | 0/TBD | Not started | - |
