@@ -16,7 +16,7 @@
 
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { usernameSchema } from "@/lib/validation/username"
 import { Prisma } from "../../../prisma/generated/prisma/client"
@@ -29,7 +29,7 @@ export const userRouter = createTRPCRouter({
    * username included for nav avatar link (Pitfall 6 fix).
    */
   getMe: protectedProcedure.query(async ({ ctx }) => {
-    return db.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: ctx.session.user.id },
       select: {
         id: true,
@@ -42,6 +42,8 @@ export const userRouter = createTRPCRouter({
         username: true,
       },
     })
+    if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User record not found." })
+    return user
   }),
 
   /**
