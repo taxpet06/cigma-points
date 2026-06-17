@@ -36,7 +36,7 @@ export interface PostCardProps {
   targetUser: { id: string; name: string | null; image: string | null }
   voteCount: number // sourced from _count.votes
 
-  // Phase 3 forward-compat optional props — accepted now, NOT implemented (D-08 / Pattern 9)
+  // Phase 3 props — mediaUrl is now rendered; others remain stubbed for Phase 4/5
   mediaUrl?: string
   replyCount?: number
   agreeCount?: number
@@ -67,6 +67,15 @@ function formatRelativeTime(date: Date): string {
   return rtf.format(-diffDays, "day")
 }
 
+/** Detects media type from URL extension for img vs video rendering. */
+function getMediaType(url: string): "image" | "video" {
+  const lower = url.toLowerCase().split("?")[0]
+  if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || lower.endsWith(".avi")) {
+    return "video"
+  }
+  return "image"
+}
+
 /**
  * Formats a Date as a short locale date+time string for the voting deadline.
  */
@@ -94,9 +103,8 @@ export function PostCard({
   author,
   targetUser,
   voteCount,
-  // Phase 3 forward-compat — accepted but not rendered yet
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  mediaUrl: _mediaUrl,
+  mediaUrl,
+  // Phase 4/5 props — accepted but not rendered yet
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   replyCount: _replyCount,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -205,6 +213,28 @@ export function PostCard({
         <p className="mt-1 text-sm text-muted-foreground">
           {formatRelativeTime(createdAt)}
         </p>
+
+        {/* Media attachment */}
+        {mediaUrl && (
+          <div className="mt-3 rounded-md overflow-hidden">
+            {getMediaType(mediaUrl) === "video" ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video
+                src={mediaUrl}
+                controls
+                className="w-full max-h-64 object-cover"
+                aria-label="Post media"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaUrl}
+                alt="Post media"
+                className="w-full max-h-64 object-cover"
+              />
+            )}
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="border-t pt-3">
