@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
@@ -15,6 +15,7 @@ export function FeedList() {
   const { data: session } = useSession()
   const currentUserId = session?.user?.id
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
   const {
     data,
@@ -32,6 +33,7 @@ export function FeedList() {
   const castVoteMutation = useMutation(
     trpc.post.castVote.mutationOptions({
       onMutate: async ({ postId, type }) => {
+        setPendingIds((prev) => new Set(prev).add(postId))
         await queryClient.cancelQueries(trpc.post.getFeed.infiniteQueryFilter({ limit: 20 }))
         const snapshot = queryClient.getQueriesData(trpc.post.getFeed.infiniteQueryFilter({ limit: 20 }))
         queryClient.setQueriesData(
@@ -68,7 +70,8 @@ export function FeedList() {
         ctx?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data))
         toast.error("Vote failed — please try again.")
       },
-      onSettled: () => {
+      onSettled: (_data, _err, { postId }) => {
+        setPendingIds((prev) => { const s = new Set(prev); s.delete(postId); return s })
         void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
       },
     })
@@ -77,6 +80,7 @@ export function FeedList() {
   const retractVoteMutation = useMutation(
     trpc.post.retractVote.mutationOptions({
       onMutate: async ({ postId }) => {
+        setPendingIds((prev) => new Set(prev).add(postId))
         await queryClient.cancelQueries(trpc.post.getFeed.infiniteQueryFilter({ limit: 20 }))
         const snapshot = queryClient.getQueriesData(trpc.post.getFeed.infiniteQueryFilter({ limit: 20 }))
         queryClient.setQueriesData(
@@ -107,13 +111,12 @@ export function FeedList() {
         ctx?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data))
         toast.error("Vote failed — please try again.")
       },
-      onSettled: () => {
+      onSettled: (_data, _err, { postId }) => {
+        setPendingIds((prev) => { const s = new Set(prev); s.delete(postId); return s })
         void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
       },
     })
   )
-
-  const isPending = castVoteMutation.isPending || retractVoteMutation.isPending
 
   const handleIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -155,7 +158,7 @@ export function FeedList() {
           disagreeCount={item.disagreeCount}
           userVote={item.userVote ? { type: item.userVote.type as "AGREE" | "DISAGREE" } : null}
           currentUserId={currentUserId}
-          isPending={isPending}
+          isPending={pendingIds.has(item.id)}
           onVote={(type) => castVoteMutation.mutate({ postId: item.id, type })}
           onRetract={() => retractVoteMutation.mutate({ postId: item.id })}
           replyCount={item._count.replies}
