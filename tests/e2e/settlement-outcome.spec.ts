@@ -2,6 +2,9 @@
 
 import { test } from "@playwright/test"
 
-test.todo("settled post with agrees > disagrees shows Awarded badge")
-test.todo("settled post with agrees <= disagrees shows Rejected badge")
-test.todo("settled post hides vote buttons and shows count-only display")
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("settled post with agrees > disagrees shows Awarded badge", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("settled post with agrees <= disagrees shows Rejected badge", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("settled post hides vote buttons and shows count-only display", async () => {})

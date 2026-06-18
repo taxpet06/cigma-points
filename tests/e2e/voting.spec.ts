@@ -2,8 +2,13 @@
 
 import { test } from "@playwright/test"
 
-test.todo("authenticated user can cast an agree vote on a post")
-test.todo("authenticated user can flip vote from agree to disagree")
-test.todo("authenticated user can retract vote")
-test.todo("user cannot vote on their own post — vote buttons are hidden")
-test.todo("vote counts update optimistically on click")
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("authenticated user can cast an agree vote on a post", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("authenticated user can flip vote from agree to disagree", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("authenticated user can retract vote", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("user cannot vote on their own post — vote buttons are hidden", async () => {})
+// eslint-disable-next-line playwright/no-skipped-test
+test.skip("vote counts update optimistically on click", async () => {})
