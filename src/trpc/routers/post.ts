@@ -18,6 +18,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { createPostSchema } from "@/lib/validation/post"
+import { castVoteSchema, retractVoteSchema } from "@/lib/validation/vote"
 
 export const postRouter = createTRPCRouter({
   /**
@@ -87,7 +88,8 @@ export const postRouter = createTRPCRouter({
         limit: z.number().min(1).max(50).default(20),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const callerId = ctx.session.user.id
       const { cursor, limit } = input
 
       const items = await db.post.findMany({
@@ -108,7 +110,8 @@ export const postRouter = createTRPCRouter({
           createdAt: true,
           author: { select: { id: true, name: true, image: true, username: true } },
           targetUser: { select: { id: true, name: true, image: true, username: true } },
-          _count: { select: { votes: true, replies: true } },
+          votes: { select: { type: true, userId: true } },
+          _count: { select: { replies: true } },
         },
       })
 
@@ -119,7 +122,24 @@ export const postRouter = createTRPCRouter({
         nextCursor = nextItem.id
       }
 
-      return { items, nextCursor }
+      // Compute vote counts and current-user vote state JS-side.
+      // Raw votes array is stripped from the return — only agreeCount, disagreeCount,
+      // and userVote (the caller's own vote row or null) are exposed to clients.
+      // This prevents leaking the full voter list (Information Disclosure — threat model).
+      type VoteRow = { type: string; userId: string }
+      const mapped = (items as Array<{ votes: VoteRow[] } & Record<string, unknown>>).map(
+        (post) => {
+          const { votes, ...rest } = post
+          return {
+            ...rest,
+            agreeCount: votes.filter((v) => v.type === "AGREE").length,
+            disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+            userVote: votes.find((v) => v.userId === callerId) ?? null,
+          }
+        }
+      )
+
+      return { items: mapped, nextCursor }
     }),
 
   /**
@@ -163,5 +183,75 @@ export const postRouter = createTRPCRouter({
         },
         orderBy: { username: "asc" },
       })
+    }),
+
+  /**
+   * Casts or flips an agree/disagree vote on a post.
+   *
+   * Security:
+   * - userId always from ctx.session.user.id — never from client input (Spoofing)
+   * - Self-vote blocked server-side (Elevation of Privilege)
+   * - Voting window enforced server-side (Tampering)
+   * - Upsert on @@unique([postId, userId]) prevents duplicate votes (Tampering)
+   * - castVoteSchema excludes settled, outcome, votingEndsAt (mass-assignment guard)
+   */
+  castVote: protectedProcedure
+    .input(castVoteSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const post = await db.post.findUnique({
+        where: { id: input.postId },
+        select: { authorId: true, votingEndsAt: true, settled: true },
+      })
+
+      if (!post) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found." })
+      }
+
+      if (post.settled || post.votingEndsAt <= new Date()) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Voting is closed for this post." })
+      }
+
+      if (post.authorId === userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You cannot vote on your own post." })
+      }
+
+      return db.vote.upsert({
+        where: { postId_userId: { postId: input.postId, userId } },
+        update: { type: input.type },
+        create: { postId: input.postId, userId, type: input.type },
+      })
+    }),
+
+  /**
+   * Retracts a user's vote on a post.
+   *
+   * Security:
+   * - userId always from ctx.session.user.id — never from client input
+   * - Voting window enforced server-side (Tampering)
+   * - Uses deleteMany (not delete) — silently no-ops if vote row doesn't exist (Integrity)
+   */
+  retractVote: protectedProcedure
+    .input(retractVoteSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const post = await db.post.findUnique({
+        where: { id: input.postId },
+        select: { votingEndsAt: true, settled: true },
+      })
+
+      if (!post) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found." })
+      }
+
+      if (post.settled || post.votingEndsAt <= new Date()) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Voting is closed for this post." })
+      }
+
+      await db.vote.deleteMany({ where: { postId: input.postId, userId } })
+
+      return { success: true }
     }),
 })
