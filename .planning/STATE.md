@@ -1,4 +1,17 @@
-
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: ready_to_plan
+last_updated: 2026-06-18T00:47:45.930Z
+progress:
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 16
+  completed_plans: 16
+  percent: 67
+stopped_at: Phase 4 complete (4/4) — ready to discuss Phase 5
+---
 
 # Roadmap: Cigma Points
 
@@ -106,6 +119,7 @@ Plans:
 - [ ] 03-04-PLAN.md — PostCard mediaUrl activation (img/video) + createPostSchema unit tests + E2E tests (POST-01, POST-02, POST-04)
 
 **Cross-cutting constraints:**
+
 - All three tRPC procedures are protectedProcedure — UNAUTHORIZED thrown before any DB access
 - authorId always sourced from ctx.session.user.id, never from client input (createPost + postMediaUploader)
 - Cache invalidation uses queryClient.invalidateQueries(trpc.post.getFeed.queryFilter()) — confirmed method name
