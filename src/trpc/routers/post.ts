@@ -88,7 +88,8 @@ export const postRouter = createTRPCRouter({
         limit: z.number().min(1).max(50).default(20),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const callerId = ctx.session.user.id
       const { cursor, limit } = input
 
       const items = await db.post.findMany({
@@ -109,7 +110,8 @@ export const postRouter = createTRPCRouter({
           createdAt: true,
           author: { select: { id: true, name: true, image: true, username: true } },
           targetUser: { select: { id: true, name: true, image: true, username: true } },
-          _count: { select: { votes: true, replies: true } },
+          votes: { select: { type: true, userId: true } },
+          _count: { select: { replies: true } },
         },
       })
 
@@ -120,7 +122,24 @@ export const postRouter = createTRPCRouter({
         nextCursor = nextItem.id
       }
 
-      return { items, nextCursor }
+      // Compute vote counts and current-user vote state JS-side.
+      // Raw votes array is stripped from the return — only agreeCount, disagreeCount,
+      // and userVote (the caller's own vote row or null) are exposed to clients.
+      // This prevents leaking the full voter list (Information Disclosure — threat model).
+      type VoteRow = { type: string; userId: string }
+      const mapped = (items as Array<{ votes: VoteRow[] } & Record<string, unknown>>).map(
+        (post) => {
+          const { votes, ...rest } = post
+          return {
+            ...rest,
+            agreeCount: votes.filter((v) => v.type === "AGREE").length,
+            disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+            userVote: votes.find((v) => v.userId === callerId) ?? null,
+          }
+        }
+      )
+
+      return { items: mapped, nextCursor }
     }),
 
   /**
