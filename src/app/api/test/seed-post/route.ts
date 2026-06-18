@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 
-// Test-only endpoint — never active in production
+// Test-only endpoint — blocked in all Vercel environments (preview + production)
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.VERCEL_ENV) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       type: outcome === "Awarded" ? "AWARD" : "DEDUCT",
       title,
       explanation: "E2E test post",
-      cpAmount: outcome === "Awarded" ? 5 : -3,
+      cpAmount: 5,
       authorId: author.id,
       targetUserId: target.id,
       votingEndsAt: new Date(Date.now() - 1000),
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.VERCEL_ENV) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
