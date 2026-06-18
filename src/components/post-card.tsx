@@ -1,10 +1,4 @@
-// PostCard — shared post card component built in Phase 2 for profile post history.
-// Phase 3 inherits this component for the main feed (D-08 / Pattern 9 in RESEARCH.md).
-//
-// Phase 3 forward-compat optional props accepted now (not implemented):
-//   mediaUrl, replyCount, agreeCount, disagreeCount
-//
-// Security: PostCard renders server-provided values only; no client mutation (T-02-07).
+"use client"
 
 import {
   ArrowUpCircle,
@@ -17,13 +11,13 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { VoteButtons } from "@/components/feed/vote-buttons"
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface PostCardProps {
-  /** Primary fields from getPostHistory items */
   id: string
   type: "AWARD" | "DEDUCT" | "TASK"
   title: string
@@ -34,23 +28,27 @@ export interface PostCardProps {
   createdAt: Date
   author: { id: string; name: string | null; image: string | null }
   targetUser: { id: string; name: string | null; image: string | null }
-  voteCount: number // sourced from _count.votes
 
-  // Phase 3 props — mediaUrl is now rendered; others remain stubbed for Phase 4/5
-  mediaUrl?: string
-  replyCount?: number
+  // Vote display
   agreeCount?: number
   disagreeCount?: number
+  userVote?: { type: "AGREE" | "DISAGREE" } | null
+
+  // Vote interaction (provided by FeedList; absent on profile/history views)
+  currentUserId?: string | undefined
+  onVote?: (type: "AGREE" | "DISAGREE") => void
+  onRetract?: () => void
+  isPending?: boolean
+
+  // Other optional props
+  mediaUrl?: string
+  replyCount?: number
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Returns a relative time string like "3 minutes ago" using native Intl API.
- * No external date library required.
- */
 function formatRelativeTime(date: Date): string {
   const now = Date.now()
   const diffMs = now - date.getTime()
@@ -67,25 +65,12 @@ function formatRelativeTime(date: Date): string {
   return rtf.format(-diffDays, "day")
 }
 
-/** Detects media type from URL extension for img vs video rendering. */
 function getMediaType(url: string): "image" | "video" {
   const lower = url.toLowerCase().split("?")[0]
   if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || lower.endsWith(".avi")) {
     return "video"
   }
   return "image"
-}
-
-/**
- * Formats a Date as a short locale date+time string for the voting deadline.
- */
-function formatDeadline(date: Date): string {
-  return date.toLocaleString("en", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })
 }
 
 // ---------------------------------------------------------------------------
@@ -102,17 +87,17 @@ export function PostCard({
   createdAt,
   author,
   targetUser,
-  voteCount,
+  agreeCount,
+  disagreeCount,
+  userVote,
+  currentUserId,
+  onVote,
+  onRetract,
+  isPending,
   mediaUrl,
-  // Phase 4/5 props — accepted but not rendered yet
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   replyCount: _replyCount,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  agreeCount: _agreeCount,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  disagreeCount: _disagreeCount,
 }: PostCardProps) {
-  // --- Type badge ---
   const isAward = type === "AWARD"
   const isDeduct = type === "DEDUCT"
 
@@ -121,20 +106,14 @@ export function PostCard({
     {
       "text-emerald-600 bg-emerald-50": isAward,
       "text-red-600 bg-red-50": isDeduct,
-      "text-muted-foreground bg-muted": !isAward && !isDeduct, // TASK type
+      "text-muted-foreground bg-muted": !isAward && !isDeduct,
     }
   )
 
-  const TypeIcon =
-    isAward ? ArrowUpCircle : isDeduct ? ArrowDownCircle : ArrowUpCircle
+  const TypeIcon = isAward ? ArrowUpCircle : isDeduct ? ArrowDownCircle : ArrowUpCircle
   const typeBadgeLabel = isAward ? "Award" : isDeduct ? "Deduct" : type
-  const typeBadgeAriaLabel = isAward
-    ? "Award post"
-    : isDeduct
-      ? "Deduct post"
-      : "Task post"
+  const typeBadgeAriaLabel = isAward ? "Award post" : isDeduct ? "Deduct post" : "Task post"
 
-  // --- Outcome badge ---
   let outcomeBadge: React.ReactNode
   if (!settled) {
     outcomeBadge = (
@@ -143,7 +122,6 @@ export function PostCard({
         Pending
       </span>
     )
-  // Canonical outcome values written by the settlement logic: "Awarded" | "Rejected"
   } else if (outcome === "Awarded") {
     outcomeBadge = (
       <span className="inline-flex items-center gap-1 text-sm text-emerald-600">
@@ -160,19 +138,23 @@ export function PostCard({
     )
   }
 
-  // --- Avatar helpers ---
   const authorName = author.name ?? "Unknown"
   const targetName = targetUser.name ?? "Unknown"
+
+  // Vote buttons are shown only when interaction props are provided (feed view)
+  const canShowVoteButtons = !!onVote && !!onRetract
+  const isVotingOpen =
+    canShowVoteButtons &&
+    !settled &&
+    !!votingEndsAt &&
+    new Date() < new Date(votingEndsAt) &&
+    currentUserId !== author.id
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        {/* Row 1: type badge + CP amount + outcome badge */}
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={typeBadgeClasses}
-            aria-label={typeBadgeAriaLabel}
-          >
+          <span className={typeBadgeClasses} aria-label={typeBadgeAriaLabel}>
             <TypeIcon className="h-3.5 w-3.5" aria-hidden="true" />
             {typeBadgeLabel}
           </span>
@@ -183,18 +165,11 @@ export function PostCard({
           <span className="ml-auto">{outcomeBadge}</span>
         </div>
 
-        {/* Row 2: author → target with avatars */}
         <div className="flex items-center gap-2 mt-1">
           <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage
-              src={author.image ?? undefined}
-              alt={`${authorName}'s profile photo`}
-            />
+            <AvatarImage src={author.image ?? undefined} alt={`${authorName}'s profile photo`} />
             <AvatarFallback>
-              <UserCircle
-                className="h-full w-full text-muted-foreground"
-                aria-hidden="true"
-              />
+              <UserCircle className="h-full w-full text-muted-foreground" aria-hidden="true" />
             </AvatarFallback>
           </Avatar>
           <span className="text-sm text-muted-foreground">
@@ -206,15 +181,9 @@ export function PostCard({
       </CardHeader>
 
       <CardContent className="pb-3">
-        {/* Post title */}
         <p className="text-base font-semibold">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{formatRelativeTime(createdAt)}</p>
 
-        {/* Relative timestamp */}
-        <p className="mt-1 text-sm text-muted-foreground">
-          {formatRelativeTime(createdAt)}
-        </p>
-
-        {/* Media attachment */}
         {mediaUrl && (
           <div className="mt-3 rounded-md overflow-hidden">
             {getMediaType(mediaUrl) === "video" ? (
@@ -237,14 +206,29 @@ export function PostCard({
         )}
       </CardContent>
 
-      <CardFooter className="border-t pt-3">
-        <div className="flex w-full items-center justify-between text-sm text-muted-foreground">
-          <span>{voteCount} {voteCount === 1 ? "vote" : "votes"}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            Voting ends {formatDeadline(votingEndsAt)}
-          </span>
-        </div>
+      <CardFooter className="flex flex-col gap-2 border-t pt-2">
+        {canShowVoteButtons && (
+          <VoteButtons
+            agreeCount={agreeCount ?? 0}
+            disagreeCount={disagreeCount ?? 0}
+            userVote={userVote ?? null}
+            isVotingOpen={isVotingOpen}
+            isPending={isPending ?? false}
+            onVote={onVote}
+            onRetract={onRetract}
+          />
+        )}
+        {!settled && votingEndsAt && (
+          <div className="flex w-full items-center justify-end text-sm text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+            Voting ends {new Date(votingEndsAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </div>
+        )}
       </CardFooter>
     </Card>
   )
