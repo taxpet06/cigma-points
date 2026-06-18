@@ -126,18 +126,15 @@ export const postRouter = createTRPCRouter({
       // Raw votes array is stripped from the return — only agreeCount, disagreeCount,
       // and userVote (the caller's own vote row or null) are exposed to clients.
       // This prevents leaking the full voter list (Information Disclosure — threat model).
-      type VoteRow = { type: string; userId: string }
-      const mapped = (items as Array<{ votes: VoteRow[] } & Record<string, unknown>>).map(
-        (post) => {
-          const { votes, ...rest } = post
-          return {
-            ...rest,
-            agreeCount: votes.filter((v) => v.type === "AGREE").length,
-            disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
-            userVote: votes.find((v) => v.userId === callerId) ?? null,
-          }
+      const mapped = items.map((post) => {
+        const { votes, ...rest } = post
+        return {
+          ...rest,
+          agreeCount: votes.filter((v) => v.type === "AGREE").length,
+          disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+          userVote: votes.find((v) => v.userId === callerId) ?? null,
         }
-      )
+      })
 
       return { items: mapped, nextCursor }
     }),
