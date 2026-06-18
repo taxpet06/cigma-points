@@ -132,8 +132,8 @@ function TabPanel({ userId, tab }: TabPanelProps) {
           createdAt={item.createdAt}
           author={item.author}
           targetUser={item.targetUser}
-          agreeCount={0}
-          disagreeCount={0}
+          agreeCount={item.agreeCount}
+          disagreeCount={item.disagreeCount}
         />
       ))}
 

@@ -168,7 +168,7 @@ export const userRouter = createTRPCRouter({
           createdAt: true,
           author: { select: { id: true, name: true, image: true } },
           targetUser: { select: { id: true, name: true, image: true } },
-          _count: { select: { votes: true } },
+          votes: { select: { type: true } },
         },
       })
 
@@ -178,6 +178,12 @@ export const userRouter = createTRPCRouter({
         nextCursor = nextItem.id
       }
 
-      return { items, nextCursor }
+      const mappedItems = items.map(({ votes, ...rest }) => ({
+        ...rest,
+        agreeCount: votes.filter((v) => v.type === "AGREE").length,
+        disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+      }))
+
+      return { items: mappedItems, nextCursor }
     }),
 })
