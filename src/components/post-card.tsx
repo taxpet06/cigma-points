@@ -129,13 +129,15 @@ export function PostCard({
         Awarded
       </span>
     )
-  } else {
+  } else if (outcome === "Rejected") {
     outcomeBadge = (
       <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <XCircle className="h-4 w-4" />
         Rejected
       </span>
     )
+  } else {
+    outcomeBadge = null
   }
 
   const authorName = author.name ?? "Unknown"
