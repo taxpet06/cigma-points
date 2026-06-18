@@ -234,20 +234,31 @@ export const postRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
 
-      const post = await db.post.findUnique({
-        where: { id: input.postId },
-        select: { votingEndsAt: true, settled: true },
+      // Atomic: fold the settlement guard into the WHERE predicate so the
+      // settled-check and the delete cannot be separated by the settlement cron.
+      const result = await db.vote.deleteMany({
+        where: {
+          postId: input.postId,
+          userId,
+          post: { settled: false, votingEndsAt: { gt: new Date() } },
+        },
       })
 
-      if (!post) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found." })
+      if (result.count === 0) {
+        // Distinguish "voting closed" from "no vote existed" so the client
+        // gets the right error code.
+        const post = await db.post.findUnique({
+          where: { id: input.postId },
+          select: { settled: true, votingEndsAt: true },
+        })
+        if (!post) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Post not found." })
+        }
+        if (post.settled || post.votingEndsAt <= new Date()) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Voting is closed for this post." })
+        }
+        // count=0 but voting is open — user had no vote to retract; silent no-op.
       }
-
-      if (post.settled || post.votingEndsAt <= new Date()) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Voting is closed for this post." })
-      }
-
-      await db.vote.deleteMany({ where: { postId: input.postId, userId } })
 
       return { success: true }
     }),
