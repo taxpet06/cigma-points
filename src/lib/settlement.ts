@@ -21,6 +21,10 @@ type ExpiredPost = {
 export function settlePost(
   post: ExpiredPost,
 ): ReturnType<typeof db.post.update>[] {
+  if (post.cpAmount <= 0) {
+    throw new Error(`settlePost: cpAmount must be positive, got ${post.cpAmount} for post ${post.id}`)
+  }
+
   const agreeCount = post.votes.filter((v) => v.type === "AGREE").length
   const disagreeCount = post.votes.filter((v) => v.type === "DISAGREE").length
 
