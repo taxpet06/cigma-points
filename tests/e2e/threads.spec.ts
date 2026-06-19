@@ -45,8 +45,9 @@ async function setUsername(page: import("@playwright/test").Page, username: stri
   const usernameField = page.getByLabel(/username/i)
   await usernameField.clear()
   await usernameField.fill(username)
-  await page.getByRole("button", { name: /save/i }).click()
-  await page.waitForTimeout(500)
+  await page.getByRole("button", { name: /claim username/i }).click()
+  // Wait for redirect to /u/[username] after successful claim
+  await page.waitForURL(/\/u\//, { timeout: 10000 })
 }
 
 test.describe("Setup — provision test users and a post", () => {
@@ -68,6 +69,7 @@ test.describe("Setup — provision test users and a post", () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible()
 
     await page.getByPlaceholder("Search users…").fill(REPLY_TARGET.username.slice(0, 6))
+    await page.waitForTimeout(500)
     await page.getByText(`@${REPLY_TARGET.username}`).click()
 
     await page.getByPlaceholder("What are you nominating them for?").fill(POST_TITLE)
@@ -75,8 +77,11 @@ test.describe("Setup — provision test users and a post", () => {
     await page.locator('input[type="number"]').fill("5")
 
     await page.getByRole("button", { name: /submit post/i }).click()
-    await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(POST_TITLE).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole("dialog", { name: /create post/i })).not.toBeVisible({ timeout: 10000 })
+
+    // Reload feed to ensure cache is flushed and new post is visible
+    await page.goto("/")
+    await expect(page.getByText(POST_TITLE).first()).toBeVisible({ timeout: 15000 })
 
     // Extract the post ID from the reply count link (href="/post/<id>") on the feed card
     const postCard = page.locator("div.rounded-lg.border").filter({ hasText: POST_TITLE }).first()
@@ -140,7 +145,7 @@ test.describe("THRD-03: Reply to a reply (nested)", () => {
 
     // Click "Reply" on that reply card to trigger nested context
     const replyCard = page.locator("div.rounded-lg.border").filter({ hasText: topLevelReply }).first()
-    await replyCard.getByRole("button", { name: /^reply$/i }).click()
+    await replyCard.getByRole("button", { name: /^reply to/i }).click()
 
     // "Replying to" banner should appear
     await expect(page.getByText(/Replying to/i)).toBeVisible({ timeout: 5000 })
