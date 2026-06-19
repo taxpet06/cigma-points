@@ -137,7 +137,20 @@ Plans:
   2. A user can attach an image, video, or GIF to a reply
   3. A user can reply to an existing reply, creating a nested thread (Twitter-style)
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — createReplySchema + replyRouter (createReply, getReplies) + _app.ts registration + reply-schema unit tests + failing threads E2E scaffold
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — /post/[id] detail page + ReplyCard (recursive, 4-level indent cap) + ReplyThread (buildTree) + ReplyCompose (banner, media reuse, non-optimistic submit) — THRD-01/02/03 functional
+
+**Wave 3** *(blocked on Wave 1 + Wave 2 completion)*
+
+- [ ] 05-03-PLAN.md — PostCard replyCount link activation (MessageSquare → /post/[id]) + threads E2E pass (THRD-01, THRD-03)
+
 **UI hint**: yes
 
 ### Phase 6: Admin Panel + Tasks
@@ -168,5 +181,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
 | 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 4/4 | Complete    | 2026-06-18 |
-| 5. Threads + Replies | 0/TBD | Not started | - |
+| 5. Threads + Replies | 0/3 | Planned | - |
 | 6. Admin Panel + Tasks | 0/TBD | Not started | - |
