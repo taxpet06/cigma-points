@@ -171,11 +171,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — schema migration (Reply.taskId, nullable postId, Task.replies, PostType.TASK removal) + task/admin validation schemas + taskRouter + adminRouter + createReply taskId extension + _app registration + [BLOCKING] db push + Wave 0 unit tests + failing E2E scaffold
+- [x] 06-01-PLAN.md — schema migration (Reply.taskId, nullable postId, Task.replies, PostType.TASK removal) + task/admin validation schemas + taskRouter + adminRouter + createReply taskId extension + _app registration + [BLOCKING] db push + Wave 0 unit tests + failing E2E scaffold
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 06-02-PLAN.md — /admin dashboard: AdminUserTable (inline CP balance edit) + CreateTaskModal + header Tasks nav link (ADMN-01, ADMN-02)
+- [x] 06-02-PLAN.md — /admin dashboard: AdminUserTable (inline CP balance edit) + CreateTaskModal + header Tasks nav link (ADMN-01, ADMN-02)
 - [ ] 06-03-PLAN.md — /tasks list + TaskCard + /tasks/[id] detail + TaskReplyCard (status + Mark Complete) + task thread components + ReplyCompose taskId extension (TASK-01, TASK-02, TASK-03, ADMN-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -196,4 +196,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 4/4 | Complete    | 2026-06-18 |
 | 5. Threads + Replies | 3/3 | Complete   | 2026-06-19 |
-| 6. Admin Panel + Tasks | 0/4 | Planned | - |
+| 6. Admin Panel + Tasks | 2/4 | In Progress|  |
