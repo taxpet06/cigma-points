@@ -144,7 +144,7 @@ export function FeedList() {
         <PostCard
           key={item.id}
           id={item.id}
-          type={item.type as "AWARD" | "DEDUCT" | "TASK"}
+          type={item.type as "AWARD" | "DEDUCT"}
           title={item.title}
           cpAmount={item.cpAmount}
           mediaUrl={item.mediaUrl ?? undefined}

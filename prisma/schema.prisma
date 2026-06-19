@@ -25,7 +25,7 @@ enum Role {
 enum PostType {
   AWARD
   DEDUCT
-  TASK
+  // TASK removed — D-03: Task Posts live in the Task model (not in Post with type=TASK)
 }
 
 enum VoteType {
@@ -158,13 +158,15 @@ model Vote {
 
 model Reply {
   id       String  @id @default(cuid())
-  postId   String
+  postId   String?  // was String — now nullable for task replies (D-02, Pitfall 1)
+  taskId   String?  // new field (D-02)
   parentId String?
   authorId String
   content  String
   mediaUrl String?
 
-  post     Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post     Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  task     Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
   parent   Reply?  @relation("nested", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children Reply[] @relation("nested")
   author   User    @relation(fields: [authorId], references: [id])
@@ -184,6 +186,7 @@ model Task {
 
   admin       User             @relation(fields: [adminId], references: [id])
   completions TaskCompletion[]
+  replies     Reply[]          // new back-relation (D-02)
 
   createdAt DateTime @default(now())
 
