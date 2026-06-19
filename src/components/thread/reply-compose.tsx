@@ -65,10 +65,11 @@ export function ReplyCompose({
   )
 
   function handleSubmit() {
+    if (content.trim().length === 0) return
     createReply.mutate({
       postId,
       parentId: parentId ?? undefined,
-      content,
+      content: content.trim(),
       mediaUrl,
     })
   }

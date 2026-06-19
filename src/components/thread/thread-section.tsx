@@ -8,7 +8,7 @@
 //   handleReply: scrolls to compose, sets parentId/username, defers focus past iOS Safari gesture (RESEARCH Pitfall 5)
 //   handleClearParent: resets both parentId and replyingToUsername
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ReplyCompose } from "@/components/thread/reply-compose"
 import { ReplyThread } from "@/components/thread/reply-thread"
 
@@ -19,6 +19,13 @@ interface ThreadSectionProps {
 export function ThreadSection({ postId }: ThreadSectionProps) {
   const [parentId, setParentId] = useState<string | null>(null)
   const [replyingToUsername, setReplyingToUsername] = useState<string | null>(null)
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
+    }
+  }, [])
 
   function handleReply(username: string, replyId: string) {
     setParentId(replyId)
@@ -26,7 +33,8 @@ export function ThreadSection({ postId }: ThreadSectionProps) {
     // Scroll compose into view first
     document.querySelector("#reply-compose")?.scrollIntoView({ behavior: "smooth" })
     // setTimeout defers focus past iOS Safari's gesture check (RESEARCH Pitfall 5)
-    setTimeout(() => {
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
+    focusTimerRef.current = setTimeout(() => {
       document.getElementById("reply-compose-textarea")?.focus()
     }, 0)
   }

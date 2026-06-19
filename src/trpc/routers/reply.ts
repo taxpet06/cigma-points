@@ -44,6 +44,17 @@ export const replyRouter = createTRPCRouter({
         })
       }
 
+      // Verify parentId exists and belongs to the same post (prevents cross-post parent refs)
+      if (input.parentId) {
+        const parent = await db.reply.findUnique({
+          where: { id: input.parentId },
+          select: { postId: true },
+        })
+        if (!parent || parent.postId !== input.postId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Parent reply not found." })
+        }
+      }
+
       // Explicit select on create — never return unneeded fields
       return db.reply.create({
         data: {

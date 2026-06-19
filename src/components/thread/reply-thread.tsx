@@ -39,11 +39,11 @@ function buildTree(flat: Omit<ReplyNode, "children">[]): ReplyNode[] {
   // Initialize every node with children: []
   for (const r of flat) map.set(r.id, { ...r, children: [] })
 
-  // Attach each node to its parent's children, or roots if parentId is null
+  // Attach each node to its parent's children, or roots if parentId is null/unresolvable
   for (const r of flat) {
     const node = map.get(r.id)!
-    if (r.parentId) {
-      map.get(r.parentId)?.children.push(node)
+    if (r.parentId && map.has(r.parentId)) {
+      map.get(r.parentId)!.children.push(node)
     } else {
       roots.push(node)
     }
