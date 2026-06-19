@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: User Profiles** - Display name, avatar via Uploadthing, bio, public profile page with CP balance + history (completed 2026-06-17)
 - [x] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards (completed 2026-06-17)
 - [x] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display (completed 2026-06-18)
-- [ ] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading
+- [x] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading (completed 2026-06-19)
 - [ ] **Phase 6: Admin Panel + Tasks** - Admin user/balance table, Task Post creation, task reply review + CP award, Tasks tab
 
 ## Phase Details
@@ -141,15 +141,15 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — createReplySchema + replyRouter (createReply, getReplies) + _app.ts registration + reply-schema unit tests + failing threads E2E scaffold
+- [x] 05-01-PLAN.md — createReplySchema + replyRouter (createReply, getReplies) + _app.ts registration + reply-schema unit tests + failing threads E2E scaffold
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-02-PLAN.md — /post/[id] detail page + ReplyCard (recursive, 4-level indent cap) + ReplyThread (buildTree) + ReplyCompose (banner, media reuse, non-optimistic submit) — THRD-01/02/03 functional
+- [x] 05-02-PLAN.md — /post/[id] detail page + ReplyCard (recursive, 4-level indent cap) + ReplyThread (buildTree) + ReplyCompose (banner, media reuse, non-optimistic submit) — THRD-01/02/03 functional
 
 **Wave 3** *(blocked on Wave 1 + Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — PostCard replyCount link activation (MessageSquare → /post/[id]) + threads E2E pass (THRD-01, THRD-03)
+- [x] 05-03-PLAN.md — PostCard replyCount link activation (MessageSquare → /post/[id]) + threads E2E pass (THRD-01, THRD-03)
 
 **UI hint**: yes
 
@@ -167,7 +167,21 @@ Plans:
   4. A user can reply to a Task Post with text and any media attachment
   5. An admin can review a user's Task Post reply and mark it complete, triggering a CP award to that user; the reply then shows "Awarded" status
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — schema migration (Reply.taskId, nullable postId, Task.replies, PostType.TASK removal) + task/admin validation schemas + taskRouter + adminRouter + createReply taskId extension + _app registration + [BLOCKING] db push + Wave 0 unit tests + failing E2E scaffold
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-02-PLAN.md — /admin dashboard: AdminUserTable (inline CP balance edit) + CreateTaskModal + header Tasks nav link (ADMN-01, ADMN-02)
+- [ ] 06-03-PLAN.md — /tasks list + TaskCard + /tasks/[id] detail + TaskReplyCard (status + Mark Complete) + task thread components + ReplyCompose taskId extension (TASK-01, TASK-02, TASK-03, ADMN-03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 06-04-PLAN.md — reconcile admin-tasks E2E selectors with shipped UI + full suite green (ADMN-01/02/03, TASK-01/02/03)
+
 **UI hint**: yes
 
 ## Progress
@@ -181,5 +195,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. User Profiles | 4/4 | Complete   | 2026-06-17 |
 | 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 4/4 | Complete    | 2026-06-18 |
-| 5. Threads + Replies | 0/3 | Planned | - |
-| 6. Admin Panel + Tasks | 0/TBD | Not started | - |
+| 5. Threads + Replies | 3/3 | Complete   | 2026-06-19 |
+| 6. Admin Panel + Tasks | 0/4 | Planned | - |
