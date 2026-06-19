@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -7,6 +8,7 @@ import {
   CheckCircle2,
   XCircle,
   UserCircle,
+  MessageSquare,
 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
@@ -78,6 +80,7 @@ function getMediaType(url: string): "image" | "video" {
 // ---------------------------------------------------------------------------
 
 export function PostCard({
+  id,
   type,
   title,
   cpAmount,
@@ -95,8 +98,7 @@ export function PostCard({
   onRetract,
   isPending,
   mediaUrl,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  replyCount: _replyCount,
+  replyCount,
 }: PostCardProps) {
   const isAward = type === "AWARD"
   const isDeduct = type === "DEDUCT"
@@ -229,6 +231,19 @@ export function PostCard({
               hour: "numeric",
               minute: "2-digit",
             })}
+          </div>
+        )}
+        {typeof replyCount === "number" && (
+          <div className="flex w-full items-center">
+            <Link
+              href={`/post/${id}`}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" aria-hidden="true" />
+              {replyCount === 0
+                ? "Reply"
+                : `${replyCount} ${replyCount === 1 ? "Reply" : "Replies"}`}
+            </Link>
           </div>
         )}
       </CardFooter>
