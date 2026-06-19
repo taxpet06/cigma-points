@@ -56,7 +56,7 @@ export default async function PostDetailPage({
       {/* Original post (read-only, no vote buttons, no reply count link) */}
       <PostCard
         id={post.id}
-        type={post.type as "AWARD" | "DEDUCT" | "TASK"}
+        type={post.type as "AWARD" | "DEDUCT"}
         title={post.title}
         cpAmount={post.cpAmount}
         mediaUrl={post.mediaUrl ?? undefined}

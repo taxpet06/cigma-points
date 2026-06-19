@@ -21,7 +21,7 @@ import { VoteButtons } from "@/components/feed/vote-buttons"
 
 export interface PostCardProps {
   id: string
-  type: "AWARD" | "DEDUCT" | "TASK"
+  type: "AWARD" | "DEDUCT"
   title: string
   cpAmount: number
   outcome: string | null
