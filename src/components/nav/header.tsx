@@ -62,6 +62,14 @@ export function Header() {
                 {me?.cigmaPoints ?? 0} CP
               </span>
 
+              {/* Tasks link — visible to ALL authenticated users (D-07) */}
+              <Link
+                href="/tasks"
+                className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+              >
+                Tasks
+              </Link>
+
               {/* Admin link — decorative only, real gate is middleware */}
               {isAdmin && (
                 <Link
