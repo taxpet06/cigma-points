@@ -176,7 +176,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 06-02-PLAN.md — /admin dashboard: AdminUserTable (inline CP balance edit) + CreateTaskModal + header Tasks nav link (ADMN-01, ADMN-02)
-- [ ] 06-03-PLAN.md — /tasks list + TaskCard + /tasks/[id] detail + TaskReplyCard (status + Mark Complete) + task thread components + ReplyCompose taskId extension (TASK-01, TASK-02, TASK-03, ADMN-03)
+- [x] 06-03-PLAN.md — /tasks list + TaskCard + /tasks/[id] detail + TaskReplyCard (status + Mark Complete) + task thread components + ReplyCompose taskId extension (TASK-01, TASK-02, TASK-03, ADMN-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -196,4 +196,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 4/4 | Complete    | 2026-06-18 |
 | 5. Threads + Replies | 3/3 | Complete   | 2026-06-19 |
-| 6. Admin Panel + Tasks | 2/4 | In Progress|  |
+| 6. Admin Panel + Tasks | 3/4 | In Progress|  |
