@@ -66,11 +66,12 @@ const MAX_VISUAL_DEPTH = 4
 
 interface TaskReplyCardProps {
   reply: TaskReplyNode
+  taskId: string  // explicit required prop — sourced from the task page, not from reply.taskId (WR-02)
   depth: number
   onReply: (authorUsername: string, replyId: string) => void
 }
 
-export function TaskReplyCard({ reply, depth, onReply }: TaskReplyCardProps) {
+export function TaskReplyCard({ reply, taskId, depth, onReply }: TaskReplyCardProps) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { data: session } = useSession()
@@ -88,7 +89,7 @@ export function TaskReplyCard({ reply, depth, onReply }: TaskReplyCardProps) {
       onSuccess: () => {
         toast.success("CP awarded")
         void queryClient.invalidateQueries(
-          trpc.task.getTaskReplies.queryFilter({ taskId: reply.taskId! })
+          trpc.task.getTaskReplies.queryFilter({ taskId })
         )
       },
       onError: () => {
@@ -146,7 +147,7 @@ export function TaskReplyCard({ reply, depth, onReply }: TaskReplyCardProps) {
                 disabled={completeTask.isPending}
                 aria-label={`Mark complete for ${displayName}'s reply`}
                 onClick={() =>
-                  completeTask.mutate({ taskId: reply.taskId!, replyId: reply.id })
+                  completeTask.mutate({ taskId, replyId: reply.id })
                 }
               >
                 {completeTask.isPending ? (
@@ -210,6 +211,7 @@ export function TaskReplyCard({ reply, depth, onReply }: TaskReplyCardProps) {
             <TaskReplyCard
               key={child.id}
               reply={child}
+              taskId={taskId}
               depth={depth + 1}
               onReply={onReply}
             />

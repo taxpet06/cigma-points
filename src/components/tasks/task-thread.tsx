@@ -100,6 +100,7 @@ export function TaskReplyThread({ taskId, onReply }: TaskReplyThreadProps) {
         <TaskReplyCard
           key={reply.id}
           reply={reply}
+          taskId={taskId}
           depth={0}
           onReply={onReply}
         />
