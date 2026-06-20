@@ -130,14 +130,12 @@ test.describe("TASK-01: Tasks tab and task detail page", () => {
     // Task list page should load
     await expect(page).toHaveURL("/tasks")
 
-    // If the task from ADMN-02 exists, click into it
-    const taskCard = page.locator("div.rounded-lg.border, article").filter({ hasText: TASK_TITLE }).first()
-    if (await taskCard.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const detailLink = taskCard.locator("a").first()
-      await detailLink.click()
-      await expect(page).toHaveURL(/\/tasks\//, { timeout: 10000 })
-      await expect(page.getByText(TASK_TITLE)).toBeVisible()
-    }
+    // ADMN-02 runs before TASK-01 in serial mode, so the task must exist; assert unconditionally (WR-04)
+    await expect(page.getByText(TASK_TITLE)).toBeVisible({ timeout: 10000 })
+    const taskLink = page.locator('a[href^="/tasks/"]').first()
+    await taskLink.click()
+    await expect(page).toHaveURL(/\/tasks\//, { timeout: 10000 })
+    await expect(page.getByText(TASK_TITLE)).toBeVisible()
   })
 })
 
