@@ -25,7 +25,8 @@ import { UploadButton } from "@/lib/uploadthing"
 // ---------------------------------------------------------------------------
 
 interface ReplyComposeProps {
-  postId: string
+  postId?: string
+  taskId?: string
   parentId: string | null
   replyingToUsername: string | null
   onClearParent: () => void
@@ -37,6 +38,7 @@ interface ReplyComposeProps {
 
 export function ReplyCompose({
   postId,
+  taskId,
   parentId,
   replyingToUsername,
   onClearParent,
@@ -55,8 +57,14 @@ export function ReplyCompose({
         setContent("")
         setMediaUrl(undefined)
         onClearParent()
-        void queryClient.invalidateQueries(trpc.reply.getReplies.queryFilter({ postId }))
-        void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
+        if (taskId) {
+          // Task reply: invalidate task replies query (Phase 6)
+          void queryClient.invalidateQueries(trpc.task.getTaskReplies.queryFilter({ taskId }))
+        } else if (postId) {
+          // Post reply: existing Phase 5 invalidations
+          void queryClient.invalidateQueries(trpc.reply.getReplies.queryFilter({ postId }))
+          void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
+        }
       },
       onError: () => {
         toast.error("Failed to post reply. Try again.")
@@ -67,7 +75,8 @@ export function ReplyCompose({
   function handleSubmit() {
     if (content.trim().length === 0) return
     createReply.mutate({
-      postId,
+      postId: postId,
+      taskId: taskId,
       parentId: parentId ?? undefined,
       content: content.trim(),
       mediaUrl,
