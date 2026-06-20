@@ -21,11 +21,14 @@ files_reviewed_list:
   - tests/unit/vote-router.test.ts
   - tests/unit/vote-state.test.ts
 findings:
-  critical: 3
-  warning: 5
+  critical: 2
+  warning: 4
   info: 3
-  total: 11
-status: issues_found
+  total: 9
+status: fixed
+fixed_at: 2026-06-17T00:00:00Z
+fixed_findings: [CR-01, CR-02, WR-01, WR-02, WR-03, WR-04]
+open_findings: [IN-01, IN-02, IN-03]
 ---
 
 # Phase 04: Code Review Report
@@ -37,149 +40,156 @@ status: issues_found
 
 ## Summary
 
-Reviewed the voting and settlement implementation for phase 04. The core settlement logic (`settlePost`) is clean and well-tested. The tRPC vote procedures have solid security posture: userId always sourced from session, self-vote blocked, voting window enforced server-side. The cron authorization guard is correct.
+This phase delivers voting (cast/flip/retract) and cron-based settlement for AWARD/DEDUCT posts. The core settlement logic in `settlePost` is correct and well-tested for the cases covered. The tRPC router security posture is sound: userId always from session, self-vote blocked server-side, voting window enforced before DB write.
 
-Three blockers were found: (1) the DEDUCT settlement path applies `decrement` by a _positive_ `cpAmount`, meaning an AWARD of +5 CP and a DEDUCT of +5 CP both move the balance in opposite directions correctly on the surface, but a DEDUCT post created with `cpAmount: -3` (as the seed endpoint does) will call `decrement(-3)` which is a Prisma increment — the sign convention is contradictory and the seed/settlement paths disagree; (2) the test seed endpoint does not check authentication at all, any unauthenticated caller can write arbitrary posts to the DB in non-production environments including staging; (3) the optimistic-update path in `feed-list.tsx` does not handle the "vote flip" case when the mutation actually lands — it sets `userVote` to the new type immediately but if `onSettled` fires an invalidation and the server returns a different state (e.g. the flip was rejected), the snapshot rollback in `onError` correctly fires, but the optimistic update diverges from server truth during the flight window because the flip subtracts `prevVote` counts and adds new counts without checking whether the mutation result confirmed the flip.
+Two blockers were found. First, the test data-write endpoint (`/api/test/seed-post`) uses `NODE_ENV === "production"` as its sole guard, which does not protect Vercel Preview deployments — Vercel sets `NODE_ENV=production` for all serverless function environments regardless of deployment target. Second, the test seed route stores `cpAmount: -3` for DEDUCT posts, while `settlePost` unconditionally calls `{ decrement: post.cpAmount }`. When `cpAmount` is negative, Prisma's `decrement` becomes an addition — the target user's balance increases instead of decreasing. The `createPostSchema` prevents this for user-created posts via `min(1)`, but the seed route bypasses all schema validation.
 
-Five warnings cover: missing CRON_SECRET presence guard at startup (not just request time), `cpAmount` sign convention not enforced in Zod validation, `retractVote` not checking `post.settled` authoritatively at time-of-delete, settled post outcome badge rendering silently falls through to "Rejected" for any non-"Awarded" outcome string including null on an unsettled-but-expired post, and the `void fetchNextPage()` pattern swallowing errors silently.
+Four warnings cover: a global `isPending` flag disabling all vote buttons across the entire feed during any single mutation; vote counts missing from the profile history view (hardcoded to 0/0); a TOCTOU race in `retractVote` between the `settled` check and the `deleteMany`; and the `PostCard` outcome badge falling through to "Rejected" for `outcome === null` on a settled post. Three info items address dead `explanation` payload, the all-todo vote router test file, and flaky `waitForTimeout` usage in E2E setup.
 
----
+## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: DEDUCT settlement sign mismatch — negative `cpAmount` causes `decrement(-N)` which Prisma interprets as increment
+### CR-01: Test data-write endpoint exposed on Vercel Preview deployments
 
-**File:** `src/lib/settlement.ts:43` and `src/app/api/test/seed-post/route.ts:25`
+**File:** `src/app/api/test/seed-post/route.ts:6` and `:38`
 
-**Issue:** In `settlePost`, when a DEDUCT post is Awarded the code calls `{ decrement: post.cpAmount }`. The `cpAmount` for a DEDUCT post is stored as a **negative** integer in the seed endpoint (`cpAmount: outcome === "Awarded" ? 5 : -3`). Prisma's `decrement` with a negative value is equivalent to an increment — it adds `abs(cpAmount)` to the balance rather than subtracting it. Even if `cpAmount` is stored as positive in real posts, the seed route and the settlement function use contradictory sign conventions with no enforcement at the schema level.
+**Issue:** Both the POST and DELETE handlers are guarded by `process.env.NODE_ENV === "production"`. Vercel sets `NODE_ENV=production` for all serverless function environments — including Preview deployments — because Next.js requires `NODE_ENV=production` for an optimized build. The variable that distinguishes production from preview on Vercel is `VERCEL_ENV` (`"production"` vs `"preview"`). As a result, any publicly-accessible Vercel Preview URL exposes `/api/test/seed-post` as a fully functional endpoint: any unauthenticated HTTP client can write arbitrary posts to the database or delete any post by ID with no authentication required.
 
-The `createPostSchema` validates `cpAmount` with `z.coerce.number().int().min(1)` — so real posts always store a _positive_ integer. The settlement correctly calls `decrement(cpAmount)` where `cpAmount` is positive. The seed endpoint however explicitly stores `cpAmount: -3` for deductions, so any E2E test that exercises the settlement path via seeded data would corrupt balances.
+**Fix:** Replace the `NODE_ENV` guard with one that blocks on all hosted environments, or require a dedicated secret:
 
-**Fix:**
 ```typescript
-// In seed-post/route.ts — always store a positive cpAmount:
-cpAmount: 5,  // always positive; direction is conveyed by `type: "AWARD" | "DEDUCT"`
+// Option A — block when running on Vercel at all (preview + production)
+if (process.env.VERCEL_ENV) {
+  return NextResponse.json({ error: "Not found" }, { status: 404 })
+}
 
-// In settlement.ts the logic is then correct as-is:
-data: {
-  cigmaPoints:
-    post.type === "AWARD"
-      ? { increment: post.cpAmount }   // post.cpAmount > 0 always
-      : { decrement: post.cpAmount },  // post.cpAmount > 0 always
-},
-```
-
-Additionally, add a DB-level or Zod-level assertion that `cpAmount > 0` is invariant for all post types, so future code cannot accidentally store negative values.
-
----
-
-### CR-02: Test seed endpoint has no authentication — writable by any unauthenticated caller on staging/preview
-
-**File:** `src/app/api/test/seed-post/route.ts:5-6`
-
-**Issue:** The only guard is `process.env.NODE_ENV === "production"`. On Vercel preview deployments and staging environments, `NODE_ENV` is `"production"` by convention (Next.js sets it at build time), so the guard may or may not fire depending on deployment config. More critically, **there is no secret / session check at all** — any HTTP client that can reach the endpoint can insert arbitrary posts into the database. If a preview branch is deployed and `NODE_ENV !== "production"` (e.g. a local CI environment pointed at a shared DB, or a misconfigured staging deployment), the endpoint is fully open.
-
-**Fix:**
-```typescript
-// Add a dedicated seed secret check, independent of NODE_ENV:
-export async function POST(req: Request) {
-  const seedSecret = process.env.SEED_SECRET
-  const authHeader = req.headers.get("authorization")
-  const provided = authHeader?.replace("Bearer ", "")
-
-  if (!seedSecret || provided !== seedSecret) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
-  }
-  // ... rest of handler
+// Option B — require an explicit E2E secret (prevents exposure even if env leaks)
+const provided = req.headers.get("authorization")?.replace("Bearer ", "")
+if (!process.env.E2E_SECRET || provided !== process.env.E2E_SECRET) {
+  return NextResponse.json({ error: "Not found" }, { status: 404 })
 }
 ```
 
-Set `SEED_SECRET` only in CI/test environments. Remove this endpoint from any deployment that touches production data.
+Apply to both the POST handler (line 6) and the DELETE handler (line 38).
 
 ---
 
-### CR-03: Optimistic update for vote-flip produces incorrect intermediate counts when `castVote` is called while a prior vote of the opposite type exists
+### CR-02: Settlement decrement with negative `cpAmount` becomes an increment
 
-**File:** `src/components/feed/feed-list.tsx:34-65`
+**File:** `src/lib/settlement.ts:44` and `src/app/api/test/seed-post/route.ts:25`
 
-**Issue:** The `onMutate` handler for `castVoteMutation` reads `prevVote` from `item.userVote?.type` and adjusts counts optimistically. This is correct for the "no prior vote" case and the "retract and recast same type" case. However, when the user currently has a DISAGREE vote and clicks AGREE (a flip), the optimistic update sets `userVote: { type: "AGREE", userId: currentUserId ?? "" }` immediately. If the mutation **fails**, `onError` reverts correctly via the snapshot. But there is a window where:
+**Issue:** `settlePost` applies `{ decrement: post.cpAmount }` for an Awarded DEDUCT post. Prisma interprets `decrement: N` as `cigmaPoints = cigmaPoints - N`. When `cpAmount` is negative (e.g. `-3`), this evaluates to `cigmaPoints - (-3) = cigmaPoints + 3` — the target user gains points instead of losing them.
 
-1. The user already has a DISAGREE vote (`prevVote === "DISAGREE"`).
-2. The user clicks AGREE.
-3. Optimistic update: `agreeCount+1`, `disagreeCount-1`, `userVote.type = "AGREE"`.
-4. The server processes the flip as an upsert — correct.
-5. `onSettled` fires `invalidateQueries`, which refetches.
-
-The bug is subtle: `currentUserId ?? ""` is used as the `userId` in the optimistic `userVote` object. If `currentUserId` is `undefined` (session not yet loaded or session expires mid-interaction), the optimistic vote is stored with `userId: ""`. When the query is later invalidated and refetched, the server returns the real vote with the real userId. This means the feed can briefly show a zero-userId vote object. More seriously, if another optimistic update fires before invalidation completes, the second `prevVote` read from the stale optimistic data will see `userId: ""` and may miscalculate counts.
-
-**Fix:**
+The test seed route stores `cpAmount: -3` for DEDUCT-typed posts (line 25):
 ```typescript
-// Guard castVote if session is not yet available:
-onVote={(type) => {
-  if (!currentUserId) return  // do not fire mutation without session
-  castVoteMutation.mutate({ postId: item.id, type })
-}}
+cpAmount: outcome === "Awarded" ? 5 : -3,
+```
 
-// In onMutate, assert currentUserId is defined before building optimistic state:
-if (!currentUserId) return  // skip optimistic update if no session
+The `createPostSchema` prevents this for user-created posts via `.min(1)`, so the settlement function is safe for all posts created through the normal tRPC path. However the seed route bypasses schema validation entirely, writing a negative `cpAmount` directly via `db.post.create`. Any E2E test that seeds a DEDUCT post and then triggers settlement (directly or via the cron endpoint) would silently credit the target user. Additionally, the sign convention is undocumented in `settlement.ts`, making it a latent trap for any future admin write path.
+
+**Fix:** Store `cpAmount` as a positive integer in the seed route (direction is conveyed by the `type` field):
+
+```typescript
+// src/app/api/test/seed-post/route.ts:25
+cpAmount: 5,  // always positive; type: "AWARD" | "DEDUCT" carries direction
+```
+
+Add a defensive guard in `settlePost` to make the invariant explicit:
+
+```typescript
+// src/lib/settlement.ts — after computing outcome, before the ops array
+if (post.cpAmount <= 0) {
+  throw new Error(`settlePost: cpAmount must be positive, got ${post.cpAmount} for post ${post.id}`)
+}
 ```
 
 ---
 
 ## Warnings
 
-### WR-01: `CRON_SECRET` absence is not validated at startup — misconfigured deployment silently serves 401 forever
+### WR-01: Global `isPending` disables all vote buttons during any single mutation
 
-**File:** `src/app/api/cron/settle/route.ts:12`
+**File:** `src/components/feed/feed-list.tsx:116-158`
 
-**Issue:** The guard `if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET)` means that if `CRON_SECRET` is not set in the environment, the cron route will always return 401. No error is logged, no alert is raised. The settlement job silently stops working and no posts are ever settled. This is an operational blind spot.
+**Issue:** A single boolean `isPending = castVoteMutation.isPending || retractVoteMutation.isPending` is passed uniformly to every `PostCard` in the rendered list. While one vote mutation is in-flight for any single post, every vote button across the entire visible feed is disabled. A user scrolling through 20 posts who votes on post 1 cannot interact with posts 2–20 until the network round-trip completes. The intent is to prevent double-submission on the same post, not to lock the entire feed.
 
-**Fix:**
+**Fix:** Track pending state per post ID:
+
 ```typescript
-// Log a startup warning (server-side only) when CRON_SECRET is absent:
-if (!process.env.CRON_SECRET) {
-  console.error("[cron/settle] CRON_SECRET environment variable is not set — cron route will reject all requests")
-}
+const [pendingIds, setPendingIds] = React.useState<Set<string>>(new Set())
+
+// In castVoteMutation onMutate:
+onMutate: async ({ postId, type }) => {
+  setPendingIds((prev) => new Set(prev).add(postId))
+  // ... existing snapshot logic ...
+},
+onSettled: (_data, _err, { postId }) => {
+  setPendingIds((prev) => { const s = new Set(prev); s.delete(postId); return s })
+  void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
+},
+
+// In render:
+isPending={pendingIds.has(item.id)}
 ```
 
-Alternatively, add `CRON_SECRET` to environment validation at app startup.
+Apply the same pattern to `retractVoteMutation`.
 
 ---
 
-### WR-02: `cpAmount` sign convention for DEDUCT posts not enforced in schema — settlement assumes positive, no invariant documented
+### WR-02: `PostHistoryTabs` hardcodes `agreeCount={0}` and `disagreeCount={0}`
 
-**File:** `src/lib/validation/post.ts:27-31`
+**File:** `src/components/profile/post-history-tabs.tsx:135-136`
 
-**Issue:** The Zod schema enforces `cpAmount >= 1` (positive integer). Settlement uses `decrement: post.cpAmount` assuming positive. But this invariant is not enforced at the DB level and is not documented on the `ExpiredPost` type in `settlement.ts`. If any code path bypasses the Zod schema (admin panel, direct DB writes, future API additions), a negative `cpAmount` on a DEDUCT post would silently add points rather than remove them.
+**Issue:** Every `PostCard` rendered in the profile history view always shows "Agree: 0  Disagree: 0" regardless of actual vote tallies. The `getPostHistory` query in `src/trpc/routers/user.ts` selects `_count: { votes: true }` (total vote count only, not split by type), so even if the component attempted to use real data, the split values are not available. For settled posts, where the vote outcome determined a real points transfer, displaying 0/0 is actively misleading.
 
-**Fix:** Add a comment/assertion to `settlement.ts` making the invariant explicit:
+**Fix:** Update `getPostHistory` to return split vote counts:
+
 ```typescript
-// Invariant: cpAmount is always a positive integer (enforced by createPostSchema min(1)).
-// decrement(cpAmount) for DEDUCT correctly subtracts; no sign flip needed.
-console.assert(post.cpAmount > 0, `settlePost: cpAmount must be positive, got ${post.cpAmount}`)
+// src/trpc/routers/user.ts — getPostHistory select
+votes: { select: { type: true } },   // replace _count: { votes: true }
+
+// map the items before returning:
+const mapped = items.map((post) => {
+  const { votes, ...rest } = post
+  return {
+    ...rest,
+    agreeCount: votes.filter((v) => v.type === "AGREE").length,
+    disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+  }
+})
+return { items: mapped, nextCursor }
 ```
+
+Then pass `item.agreeCount` and `item.disagreeCount` to `PostCard` in `post-history-tabs.tsx`.
 
 ---
 
-### WR-03: `PostCard` outcome badge falls through to "Rejected" when `outcome === null` on a settled post — wrong outcome displayed
+### WR-03: `PostCard` outcome badge silently renders "Rejected" when `outcome === null`
 
 **File:** `src/components/post-card.tsx:117-139`
 
 **Issue:** The outcome badge logic is:
 ```
-if (!settled) → "Pending"
+if (!settled)             → "Pending"
 else if (outcome === "Awarded") → "Awarded"
-else → "Rejected"          // catches null AND any unexpected string
+else                      → "Rejected"   ← catches null AND unexpected strings
 ```
 
-If a post is `settled: true` but `outcome` is `null` (which can happen if a DB migration populates `settled` without `outcome`, or a bug in the settlement transaction marks the post settled but fails to write the outcome), the card silently displays "Rejected". This is a data integrity masquerade — a post without a determined outcome looks like a deliberate rejection.
+If a post is `settled: true` but `outcome` is `null` — possible if the settlement transaction's post-update write succeeds but the balance update fails and the transaction is partially committed, or via any direct DB access — the card displays "Rejected" with no indication that the outcome is actually indeterminate. A user seeing "Rejected" has no way to know the settlement was incomplete.
 
-**Fix:**
+**Fix:** Add an explicit null branch:
+
 ```typescript
 } else if (outcome === "Rejected") {
-  outcomeBadge = <span>...</span>  // "Rejected"
+  outcomeBadge = (
+    <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <XCircle className="h-4 w-4" />
+      Rejected
+    </span>
+  )
 } else {
-  // outcome is null or unexpected — settled but indeterminate
+  // outcome is null or unexpected value — settled flag is set but outcome is indeterminate
   outcomeBadge = (
     <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
       <XCircle className="h-4 w-4" />
@@ -191,71 +201,77 @@ If a post is `settled: true` but `outcome` is `null` (which can happen if a DB m
 
 ---
 
-### WR-04: `retractVote` does not re-fetch `settled` at the moment of delete — TOCTOU window on `settled` check
+### WR-04: TOCTOU race in `retractVote` between the `settled` check and `deleteMany`
 
 **File:** `src/trpc/routers/post.ts:237-250`
 
-**Issue:** The `retractVote` procedure fetches `{ votingEndsAt, settled }` and then checks `post.settled || post.votingEndsAt <= new Date()`. But the `deleteMany` that follows is not inside a transaction that re-checks the `settled` flag atomically. If the settlement cron fires between the `findUnique` and the `deleteMany`, the vote can be deleted after settlement has already read the votes array. This creates a rare but possible race: settlement reads votes (including this vote), calculates the outcome, then the retract deletes the vote, and the balance update proceeds based on vote data that no longer reflects reality.
+**Issue:** `retractVote` reads `{ votingEndsAt, settled }` via `findUnique`, checks that voting is still open, then calls `deleteMany`. The check and the delete are not atomic. If the settlement cron fires between the `findUnique` and the `deleteMany` — a real possibility at the 15-minute cron interval — the vote is deleted after settlement has already read the votes array and computed the outcome. The balance update then applies based on a vote set that no longer matches the stored data.
 
-**Fix:** Wrap the check and delete in a transaction, or add a conditional delete that only fires if `votingEndsAt > NOW()`:
+This is admittedly a narrow race window, but the fix is straightforward.
+
+**Fix:** Move the settlement guard into the `deleteMany` predicate so the delete is a no-op if the post was settled in the interim:
+
 ```typescript
-// Only delete if voting window is still open (atomic via DB predicate):
 await db.vote.deleteMany({
   where: {
     postId: input.postId,
     userId,
-    post: { settled: false, votingEndsAt: { gt: new Date() } },
+    post: {
+      settled: false,
+      votingEndsAt: { gt: new Date() },
+    },
   },
 })
 ```
 
----
-
-### WR-05: `void fetchNextPage()` in intersection observer — errors swallowed silently in infinite scroll
-
-**File:** `src/components/feed/feed-list.tsx:121`
-
-**Issue:** `void fetchNextPage()` discards the returned promise. If `fetchNextPage` throws (network error, server error), the error is silently lost. The user sees no error message and the feed stops loading more items without explanation.
-
-**Fix:**
-```typescript
-fetchNextPage().catch((err) => {
-  console.error("Failed to fetch next page:", err)
-  // Optionally: toast.error("Failed to load more posts.")
-})
-```
+This makes the delete conditional at the DB level with no additional round-trip.
 
 ---
 
 ## Info
 
-### IN-01: `vote-router.test.ts` is entirely `.todo` — zero coverage on castVote/retractVote server procedures
+### IN-01: `explanation` fetched in `getFeed` but never rendered — dead wire payload
+
+**File:** `src/trpc/routers/post.ts:104`
+
+**Issue:** The `getFeed` select includes `explanation: true`. `PostCard` and `PostCardProps` have no `explanation` prop, so the field is fetched, serialized, and transmitted on every feed load then silently dropped. The inline comment says "zero-cost, avoids a future schema change" but it is not zero-cost at the transport layer — it adds bytes to every paginated feed response.
+
+**Fix:** Remove `explanation: true` from the select until it is actually rendered. Bringing it back requires only one line change and no schema migration.
+
+---
+
+### IN-02: `vote-router.test.ts` is entirely `test.todo` — zero coverage of security-critical guards
 
 **File:** `tests/unit/vote-router.test.ts:1-18`
 
-**Issue:** All 9 test cases for `castVote` and `retractVote` are `test.todo`. The security-critical server-side checks (FORBIDDEN when voting on own post, FORBIDDEN when window closed, upsert deduplication) have no unit-test coverage. The comment says "filled in after Wave 1 procedures are implemented" but the procedures are now implemented.
+**Issue:** All eight test stubs in `vote-router.test.ts` are `test.todo`. The file exists as a placeholder. The security guards this file was meant to cover — unauthenticated rejection, self-vote block, closed-window enforcement — are the highest-risk correctness properties in the entire voting system. The comment "filled in after Wave 1 procedures are implemented" is stale; the procedures are fully implemented.
 
-**Fix:** Implement the integration tests. At minimum: `rejects unauthenticated`, `throws FORBIDDEN when votingEndsAt passed`, and `throws FORBIDDEN when voting on own post` should be covered before shipping.
-
----
-
-### IN-02: `replyCount` is silently ignored in `PostHistoryTabs` — hardcoded zeros passed for agreeCount/disagreeCount
-
-**File:** `src/components/profile/post-history-tabs.tsx:135-137`
-
-**Issue:** The `TabPanel` renders `PostCard` with `agreeCount={0}` and `disagreeCount={0}` hardcoded, and does not pass `replyCount`. The `getPostHistory` query may or may not return these counts — if it does, they are silently dropped. If it doesn't, the history view will always show 0/0 which is misleading for settled posts.
-
-**Fix:** Either pass real counts from the `getPostHistory` query response (if available), or add a comment documenting that history view intentionally shows no counts. Check what `getPostHistory` returns and align accordingly.
+**Fix:** Implement at minimum these three cases before considering the phase done:
+- `castVote` throws `FORBIDDEN` when `votingEndsAt` has passed
+- `castVote` throws `FORBIDDEN` when `authorId === userId`
+- `retractVote` throws `FORBIDDEN` when `settled: true`
 
 ---
 
-### IN-03: `getMediaType` defaults to `"image"` for all unrecognized extensions including non-media URLs
+### IN-03: E2E `setUsername` helper uses `waitForTimeout(500)` — flaky fixed-delay synchronization
 
-**File:** `src/components/post-card.tsx:68-74`
+**File:** `tests/e2e/voting.spec.ts:49` and `tests/e2e/settlement-outcome.spec.ts:49`
 
-**Issue:** `getMediaType` returns `"image"` for any URL that does not end in a known video extension. If a non-image URL is somehow stored in `mediaUrl` (e.g., a PDF, a redirect URL, or a malformed uploadthing URL), an `<img>` tag will be rendered with a broken image rather than failing gracefully.
+**Issue:** Both E2E test files share the same `setUsername` helper that ends with `await page.waitForTimeout(500)`. Fixed-delay waits are the canonical source of flaky tests: they pass on fast runs and fail when the server is slow or under load. The test suite has no resilience guarantee for this setup step.
 
-**Fix:** This is a low-risk issue given that uploadthing controls the upload pipeline, but consider logging a warning or restricting `getMediaType` callers to only fire after validation at the upload layer.
+**Fix:** Replace with a deterministic Playwright assertion that waits for the profile-edit success toast or for the username field to reflect the saved value:
+
+```typescript
+async function setUsername(page: Page, username: string) {
+  await page.goto("/profile/edit")
+  const field = page.getByLabel(/username/i)
+  await field.clear()
+  await field.fill(username)
+  await page.getByRole("button", { name: /save/i }).click()
+  // Wait for confirmation — exact selector depends on what the form shows on success
+  await expect(page.getByText(/saved|updated/i)).toBeVisible({ timeout: 5000 })
+}
+```
 
 ---
 
