@@ -8,7 +8,7 @@
 //           Explicit select in /admin page.tsx excludes password (T-6-09 mitigated).
 // Accessibility: table role="table", th scope="col", aria-label on inline input (UI-SPEC contract).
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, UserCircle } from "lucide-react"
 import { toast } from "sonner"
@@ -45,6 +45,11 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<number>(0)
 
+  // committingRef — tracks whether an explicit save or cancel is in progress.
+  // Prevents onBlur from firing a second mutation when Enter or Escape already
+  // handled the close (CR-01: Escape saves; CR-02: Enter double-mutates).
+  const committingRef = useRef(false)
+
   // Optimistic local balance overrides — tracks newly-saved values so the
   // button reflects the committed amount while the Server Component is not
   // re-rendered (SSR props are static after first load).
@@ -66,16 +71,19 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
 
   // Inline edit helpers (Pattern 4)
   function startEdit(userId: string, currentBalance: number) {
+    committingRef.current = false
     setEditingId(userId)
     setEditValue(currentBalance)
   }
 
   function commitEdit(userId: string) {
-    updateBalance.mutate({ userId, newBalance: editValue })
+    committingRef.current = true   // block the subsequent blur from double-mutating (CR-02)
     setEditingId(null)
+    updateBalance.mutate({ userId, newBalance: editValue })
   }
 
   function cancelEdit() {
+    committingRef.current = true   // block the subsequent blur from saving (CR-01)
     setEditingId(null)
   }
 
@@ -135,10 +143,17 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
                         aria-label={`Edit CP balance for ${user.name ?? user.email}`}
                         value={editValue}
                         onChange={(e) => setEditValue(Number(e.target.value))}
-                        onBlur={() => commitEdit(user.id)}
+                        onBlur={() => {
+                          if (committingRef.current) {
+                            // Enter or Escape already handled; reset the guard and skip
+                            committingRef.current = false
+                            return
+                          }
+                          commitEdit(user.id)
+                        }}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") commitEdit(user.id)
-                          if (e.key === "Escape") cancelEdit()
+                          if (e.key === "Enter") { e.preventDefault(); commitEdit(user.id) }
+                          if (e.key === "Escape") { e.preventDefault(); cancelEdit() }
                         }}
                         autoFocus
                       />
