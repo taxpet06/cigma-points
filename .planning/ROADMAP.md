@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Posts + Feed** - Award/deduct post creation with media, public scrollable feed with post cards (completed 2026-06-17)
 - [x] **Phase 4: Voting + Settlement** - Agree/disagree votes, vote counts, Vercel Cron settlement engine, outcome display (completed 2026-06-18)
 - [x] **Phase 5: Threads + Replies** - Threaded replies on all posts, media on replies, nested threading (completed 2026-06-19)
-- [ ] **Phase 6: Admin Panel + Tasks** - Admin user/balance table, Task Post creation, task reply review + CP award, Tasks tab
+- [x] **Phase 6: Admin Panel + Tasks** - Admin user/balance table, Task Post creation, task reply review + CP award, Tasks tab (completed 2026-06-20)
 
 ## Phase Details
 
@@ -180,7 +180,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 06-04-PLAN.md — reconcile admin-tasks E2E selectors with shipped UI + full suite green (ADMN-01/02/03, TASK-01/02/03)
+- [x] 06-04-PLAN.md — reconcile admin-tasks E2E selectors with shipped UI + full suite green (ADMN-01/02/03, TASK-01/02/03)
 
 **UI hint**: yes
 
@@ -196,4 +196,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Posts + Feed | 4/4 | Complete   | 2026-06-17 |
 | 4. Voting + Settlement | 4/4 | Complete    | 2026-06-18 |
 | 5. Threads + Replies | 3/3 | Complete   | 2026-06-19 |
-| 6. Admin Panel + Tasks | 3/4 | In Progress|  |
+| 6. Admin Panel + Tasks | 4/4 | Complete   | 2026-06-20 |

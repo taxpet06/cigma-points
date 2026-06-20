@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
+status: complete
 last_updated: "2026-06-20T00:30:00.000Z"
+last_plan_completed: "06-04"
+last_session: "Completed 06-04-PLAN.md — E2E verification gate: all 6 Phase 6 requirements green (ADMN-01/02/03, TASK-01/02/03)"
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 23
-  completed_plans: 23
-  percent: 91
-last_plan_completed: "06-03"
-last_session: "Completed 06-03-PLAN.md — tasks consumption vertical slice (TASK-01/02/03, ADMN-03)"
+  completed_phases: 6
+  total_plans: 27
+  completed_plans: 27
+  percent: 100
 ---
 
 # Roadmap: Cigma Points
@@ -171,7 +171,18 @@ Plans:
   4. A user can reply to a Task Post with text and any media attachment
   5. An admin can review a user's Task Post reply and mark it complete, triggering a CP award to that user; the reply then shows "Awarded" status
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [x] 06-01-PLAN.md — Backend foundation: schemas, tRPC routers (task + admin), Prisma migration, E2E scaffold
+- [x] 06-04-PLAN.md — E2E verification gate: admin-tasks.spec.ts reconciled, all 6 requirements green
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 06-02-PLAN.md — Admin Dashboard + Tasks Nav: AdminUserTable, /admin page, CreateTaskModal, Tasks header link
+- [x] 06-03-PLAN.md — Tasks consumption vertical: /tasks, /tasks/[id], TaskCard, TaskReplyCard, Mark Complete
+
 **UI hint**: yes
 
 ## Progress
@@ -186,4 +197,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Posts + Feed | 0/4 | Planned | - |
 | 4. Voting + Settlement | 0/TBD | Not started | - |
 | 5. Threads + Replies | 0/TBD | Not started | - |
-| 6. Admin Panel + Tasks | 0/TBD | Not started | - |
+| 6. Admin Panel + Tasks | 4/4 | Complete | 2026-06-20 |
