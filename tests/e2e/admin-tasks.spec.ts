@@ -92,16 +92,17 @@ test.describe("ADMN-02: Admin creates a Task Post", () => {
 
     // Open Create Task modal
     await page.getByRole("button", { name: /create task/i }).click()
-    await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 5000 })
+    const createTaskDialog = page.getByRole("dialog", { name: "Create Task" })
+    await expect(createTaskDialog).toBeVisible({ timeout: 5000 })
 
     // Fill in task details
-    await page.getByLabel(/title/i).fill(TASK_TITLE)
-    await page.getByLabel(/description/i).fill("E2E test task description")
-    await page.locator('input[type="number"]').fill("10")
+    await createTaskDialog.getByLabel(/title/i).fill(TASK_TITLE)
+    await createTaskDialog.getByLabel(/description/i).fill("E2E test task description")
+    await createTaskDialog.locator('input[type="number"]').fill("10")
 
     // Submit
-    await page.getByRole("button", { name: /create task/i }).last().click()
-    await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 10000 })
+    await createTaskDialog.getByRole("button", { name: /create task/i }).click()
+    await expect(createTaskDialog).not.toBeVisible({ timeout: 10000 })
 
     // Task should appear on /tasks page
     await page.goto("/tasks")
@@ -164,10 +165,14 @@ test.describe("TASK-02: User replies to a task post", () => {
     // Submit a reply
     const replyText = `TASK-02 reply ${Date.now()}`
     await compose.fill(replyText)
-    await page.getByRole("button", { name: /post reply/i }).click()
+    // Ensure button is enabled before clicking
+    const postBtn = page.getByRole("button", { name: /post reply/i })
+    await expect(postBtn).toBeEnabled({ timeout: 5000 })
+    await postBtn.click()
 
-    // Reply should appear in the thread
-    await expect(page.getByText(replyText)).toBeVisible({ timeout: 10000 })
+    // Reply should appear in the Replies thread section (not just in the compose textarea)
+    const repliesSection = page.getByRole("region", { name: "Replies" })
+    await expect(repliesSection.getByText(replyText)).toBeVisible({ timeout: 15000 })
   })
 })
 

@@ -56,7 +56,7 @@ export function CreateTaskModal() {
   const form = useForm<CreateTaskValues>({
     // z.coerce.number() gives the resolver an unknown input type; cast to align generics
     resolver: zodResolver(createTaskSchema) as Resolver<CreateTaskValues>,
-    defaultValues: { cpReward: 1 },
+    defaultValues: { title: "", description: "", cpReward: 1 },
   })
 
   const createTask = useMutation(

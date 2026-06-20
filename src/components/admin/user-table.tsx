@@ -45,10 +45,16 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<number>(0)
 
+  // Optimistic local balance overrides — tracks newly-saved values so the
+  // button reflects the committed amount while the Server Component is not
+  // re-rendered (SSR props are static after first load).
+  const [localBalances, setLocalBalances] = useState<Record<string, number>>({})
+
   const updateBalance = useMutation(
     trpc.admin.updateBalance.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
         toast.success("Balance updated")
+        setLocalBalances((prev) => ({ ...prev, [variables.userId]: variables.newBalance }))
         void queryClient.invalidateQueries(trpc.admin.getAllUsers.queryFilter())
       },
       onError: () => {
@@ -144,10 +150,10 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
                     <button
                       type="button"
                       className="tabular-nums font-semibold hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-zinc-400 rounded px-1 -mx-1"
-                      onClick={() => startEdit(user.id, user.cigmaPoints)}
+                      onClick={() => startEdit(user.id, localBalances[user.id] ?? user.cigmaPoints)}
                       title="Click to edit CP balance"
                     >
-                      {user.cigmaPoints}
+                      {localBalances[user.id] ?? user.cigmaPoints}
                     </button>
                   )}
                 </div>
