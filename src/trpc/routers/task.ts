@@ -133,12 +133,14 @@ export const taskRouter = createTRPCRouter({
 
   /**
    * Marks a task reply as complete and awards CP to the reply author.
-   * Admin-only. Atomic: upserts TaskCompletion + increments cigmaPoints in a $transaction.
+   * Admin-only. Atomic: upserts TaskCompletion + increments cigmaPoints in an interactive
+   * $transaction so the idempotency check and the balance increment are serialized under
+   * the same DB transaction, preventing TOCTOU double-awards from concurrent admin sessions.
    *
    * Security:
    * - FORBIDDEN thrown for non-admin sessions (T-6-01)
-   * - Idempotency guard: existing AWARDED status → BAD_REQUEST (T-6-02, Pitfall 2)
-   * - db.$transaction ensures atomicity (T-6-03, Pattern 2)
+   * - Idempotency guard inside the transaction — existing AWARDED status → return false (T-6-02, Pitfall 2)
+   * - db.$transaction(async tx => …) ensures atomicity + cross-request isolation (T-6-03, CR-03)
    * - userId derived from reply.authorId (fetched from DB), never from client input
    */
   completeTask: protectedProcedure
@@ -152,8 +154,11 @@ export const taskRouter = createTRPCRouter({
         where: { id: input.taskId },
         select: { id: true, cpReward: true },
       })
-      if (!task || !task.cpReward) {
+      if (!task) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Task not found." })
+      }
+      if (task.cpReward == null) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Task has no CP reward." })
       }
 
       const reply = await db.reply.findUnique({
@@ -164,18 +169,20 @@ export const taskRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Reply not found." })
       }
 
-      // Pitfall 2 guard: idempotency check — re-award would double-increment balance (T-6-02)
-      const existing = await db.taskCompletion.findUnique({
-        where: { taskId_userId: { taskId: input.taskId, userId: reply.authorId } },
-        select: { status: true },
-      })
-      if (existing?.status === "AWARDED") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Already awarded." })
-      }
+      // Interactive transaction: idempotency check + upsert + increment are all atomic.
+      // Concurrent admin sessions both pass a check-outside-transaction scenario (TOCTOU, CR-03);
+      // moving the guard inside the transaction and relying on the unique(taskId, userId)
+      // constraint serializes concurrent creates correctly (T-6-03).
+      const awarded = await db.$transaction(async (tx) => {
+        const existing = await tx.taskCompletion.findUnique({
+          where: { taskId_userId: { taskId: input.taskId, userId: reply.authorId } },
+          select: { status: true },
+        })
+        if (existing?.status === "AWARDED") {
+          return false // already done — caller throws BAD_REQUEST
+        }
 
-      // Atomic: upsert completion status + increment user balance (T-6-03, Pattern 2)
-      await db.$transaction([
-        db.taskCompletion.upsert({
+        await tx.taskCompletion.upsert({
           where: { taskId_userId: { taskId: input.taskId, userId: reply.authorId } },
           update: { status: "AWARDED", awardedCp: task.cpReward },
           create: {
@@ -184,13 +191,18 @@ export const taskRouter = createTRPCRouter({
             status: "AWARDED",
             awardedCp: task.cpReward,
           },
-        }),
-        db.user.update({
+        })
+        await tx.user.update({
           where: { id: reply.authorId },
           data: { cigmaPoints: { increment: task.cpReward } },
           select: { id: true, cigmaPoints: true },
-        }),
-      ])
+        })
+        return true
+      })
+
+      if (!awarded) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Already awarded." })
+      }
 
       return { awarded: true }
     }),
