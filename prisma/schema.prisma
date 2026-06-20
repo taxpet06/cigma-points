@@ -182,7 +182,7 @@ model Task {
   title       String
   description String
   mediaUrl    String?
-  cpReward    Int?
+  cpReward    Int @default(1)  // was Int? — non-nullable; createTaskSchema min(1) enforces this at creation (WR-01)
 
   admin       User             @relation(fields: [adminId], references: [id])
   completions TaskCompletion[]
