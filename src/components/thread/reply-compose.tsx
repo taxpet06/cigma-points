@@ -15,10 +15,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, X } from "lucide-react"
 import { toast } from "sonner"
 import { useTRPC } from "@/trpc/client"
-import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { UploadButton } from "@/lib/uploadthing"
 
 // ---------------------------------------------------------------------------
 // Props
@@ -47,7 +45,6 @@ export function ReplyCompose({
   const queryClient = useQueryClient()
 
   const [content, setContent] = useState("")
-  const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // NON-OPTIMISTIC mutation (D-10) — no onMutate, waits for server confirmation
@@ -55,7 +52,6 @@ export function ReplyCompose({
     trpc.reply.createReply.mutationOptions({
       onSuccess: () => {
         setContent("")
-        setMediaUrl(undefined)
         onClearParent()
         if (taskId) {
           // Task reply: invalidate task replies query (Phase 6)
@@ -79,7 +75,6 @@ export function ReplyCompose({
       taskId: taskId,
       parentId: parentId ?? undefined,
       content: content.trim(),
-      mediaUrl,
     })
   }
 
@@ -116,36 +111,7 @@ export function ReplyCompose({
         className="resize-none"
       />
 
-      <div className="flex items-center justify-between gap-2">
-        {/* Media upload / attached indicator */}
-        <div className="flex items-center gap-2">
-          {mediaUrl ? (
-            <div className="flex items-center gap-2 text-sm">
-              <span>Media attached</span>
-              <button
-                type="button"
-                className="text-destructive hover:underline"
-                onClick={() => setMediaUrl(undefined)}
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <UploadButton
-              endpoint="postMediaUploader"
-              config={{ cn }}
-              onClientUploadComplete={(res) => {
-                const url = res[0]?.url
-                if (url) setMediaUrl(url)
-              }}
-              onUploadError={(err) => {
-                toast.error(`Upload failed: ${err.message}`)
-              }}
-            />
-          )}
-        </div>
-
-        {/* Submit button */}
+      <div className="flex justify-end">
         <Button
           variant="default"
           disabled={content.trim().length === 0 || createReply.isPending}

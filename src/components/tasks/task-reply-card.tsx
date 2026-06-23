@@ -10,8 +10,7 @@
 //             Server enforces FORBIDDEN on task.completeTask (Plan 06-01 — dual gate)
 //   T-6-13 — React escapes text content by default; no dangerouslySetInnerHTML used
 
-import { UserCircle, Reply, CheckCircle2, Clock, Loader2 } from "lucide-react"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Reply, CheckCircle2, Clock, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -39,19 +38,6 @@ function formatRelativeTime(date: Date): string {
   if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute")
   if (Math.abs(diffHours) < 24) return rtf.format(-diffHours, "hour")
   return rtf.format(-diffDays, "day")
-}
-
-function getMediaType(url: string): "image" | "video" {
-  const lower = url.toLowerCase().split("?")[0]
-  if (
-    lower.endsWith(".mp4") ||
-    lower.endsWith(".webm") ||
-    lower.endsWith(".mov") ||
-    lower.endsWith(".avi")
-  ) {
-    return "video"
-  }
-  return "image"
 }
 
 // ---------------------------------------------------------------------------
@@ -103,15 +89,6 @@ export function TaskReplyCard({ reply, taskId, depth, onReply }: TaskReplyCardPr
       <Card className="mb-2">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <Avatar className="h-8 w-8 shrink-0">
-              <AvatarImage
-                src={reply.author.image ?? undefined}
-                alt={`${displayName}'s avatar`}
-              />
-              <AvatarFallback>
-                <UserCircle className="h-full w-full text-muted-foreground" aria-hidden="true" />
-              </AvatarFallback>
-            </Avatar>
             <span className="text-sm font-medium">{displayName}</span>
             {reply.author.username && (
               <span className="text-xs text-muted-foreground">@{reply.author.username}</span>
@@ -163,25 +140,6 @@ export function TaskReplyCard({ reply, taskId, depth, onReply }: TaskReplyCardPr
         <CardContent className="pt-0 pb-2">
           <p className="text-sm">{reply.content}</p>
 
-          {reply.mediaUrl && (
-            <div className="mt-2 rounded-md overflow-hidden">
-              {getMediaType(reply.mediaUrl) === "video" ? (
-                <video
-                  src={reply.mediaUrl}
-                  controls
-                  className="w-full max-h-48 object-cover"
-                  aria-label="Reply video"
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={reply.mediaUrl}
-                  alt="Reply media"
-                  className="w-full max-h-48 object-cover"
-                />
-              )}
-            </div>
-          )}
 
           <div className="flex justify-end mt-1">
             <Button

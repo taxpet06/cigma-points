@@ -47,11 +47,11 @@ export default async function TaskDetailPage({
     <main className="max-w-2xl mx-auto px-4 py-6">
       {/* Back link — exact copy from UI-SPEC copywriting contract */}
       <Link
-        href="/tasks"
+        href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        Back to tasks
+        Back
       </Link>
 
       {/* Task card (read-only — no vote buttons on tasks) */}

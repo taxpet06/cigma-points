@@ -10,10 +10,10 @@
 
 import { useState, useRef } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Loader2, UserCircle } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useSession } from "next-auth/react"
 import { useTRPC } from "@/trpc/client"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,10 +40,15 @@ interface AdminUserTableProps {
 export function AdminUserTable({ users }: AdminUserTableProps) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.id
 
   // Inline edit state — one row at a time
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<number>(0)
+
+  // Delete confirmation state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // committingRef — tracks whether an explicit save or cancel is in progress.
   // Prevents onBlur from firing a second mutation when Enter or Escape already
@@ -54,6 +59,20 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
   // button reflects the committed amount while the Server Component is not
   // re-rendered (SSR props are static after first load).
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({})
+
+  const deleteUser = useMutation(
+    trpc.admin.deleteUser.mutationOptions({
+      onSuccess: () => {
+        toast.success("User deleted")
+        setConfirmDeleteId(null)
+        void queryClient.invalidateQueries(trpc.admin.getAllUsers.queryFilter())
+      },
+      onError: () => {
+        toast.error("Failed to delete user. Try again.")
+        setConfirmDeleteId(null)
+      },
+    })
+  )
 
   const updateBalance = useMutation(
     trpc.admin.updateBalance.mutationOptions({
@@ -88,35 +107,24 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <table role="table" className="w-full text-sm">
+    <div className="border rounded-lg overflow-x-auto">
+      <table role="table" className="min-w-full text-sm">
         <thead className="bg-muted/50">
           <tr>
-            <th scope="col" className="py-3 px-4 text-left text-sm font-semibold text-muted-foreground w-10">
-              {/* Avatar column — no label */}
-            </th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">Name</th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">Email</th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">Username</th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">CP Balance</th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">Role</th>
             <th scope="col" className="py-3 px-4 text-left text-sm font-semibold">Joined</th>
+            <th scope="col" className="py-3 px-4 text-left text-sm font-semibold w-10">
+              {/* Delete column */}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y">
           {users.map((user) => (
             <tr key={user.id} className="hover:bg-muted/20 transition-colors">
-              {/* Avatar column */}
-              <td className="py-3 px-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={undefined} alt={user.name ?? "User"} />
-                  <AvatarFallback>
-                    {/* D-11: UserCircle fallback — NO initials */}
-                    <UserCircle className="h-full w-full text-muted-foreground" aria-hidden="true" />
-                  </AvatarFallback>
-                </Avatar>
-              </td>
-
               {/* Name */}
               <td className="py-3 px-4 font-medium">
                 {user.name ?? <span className="text-muted-foreground italic">—</span>}
@@ -194,6 +202,39 @@ export function AdminUserTable({ users }: AdminUserTableProps) {
                   month: "short",
                   day: "numeric",
                 })}
+              </td>
+
+              {/* Delete */}
+              <td className="py-3 px-4">
+                {user.id !== currentUserId && (
+                  confirmDeleteId === user.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        className="text-xs text-red-600 font-semibold hover:underline"
+                        onClick={() => deleteUser.mutate({ userId: user.id })}
+                        disabled={deleteUser.isPending}
+                      >
+                        {deleteUser.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+                      </button>
+                      <span className="text-xs text-muted-foreground">/</span>
+                      <button
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={deleteUser.isPending}
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="text-muted-foreground hover:text-red-600 transition-colors"
+                      onClick={() => setConfirmDeleteId(user.id)}
+                      aria-label={`Delete ${user.name ?? user.email}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )
+                )}
               </td>
             </tr>
           ))}

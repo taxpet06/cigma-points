@@ -9,6 +9,7 @@
 //             NEVER use requireAdmin() inside tRPC (it calls redirect() → crashes tRPC, Pitfall 3)
 //   T-6-05 — getAllUsers explicit select excludes password/accounts/sessions (Information Disclosure guard)
 
+import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
@@ -70,5 +71,91 @@ export const adminRouter = createTRPCRouter({
         data: { cigmaPoints: input.newBalance },
         select: { id: true, cigmaPoints: true },
       })
+    }),
+
+  /**
+   * Permanently deletes a user and all their associated data.
+   * Admin-only. Cannot delete yourself.
+   *
+   * Cascade order (schema has no User-level cascade on most relations):
+   * 1. TaskCompletions by user
+   * 2. Votes by user
+   * 3. Re-parent nested replies whose parent was authored by user, then delete user's replies
+   * 4. Delete posts where user is author or target (votes cascade via Post → Vote)
+   *    — first null out all intra-post parentId refs, then delete post replies, then posts
+   * 5. Delete tasks created by user (TaskCompletions cascade via Task → TaskCompletion)
+   *    — same reply-cleanup pattern
+   * 6. Delete user (Account + Session cascade automatically)
+   */
+  deleteUser: protectedProcedure
+    .input(z.object({ userId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.session.user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin only." })
+      }
+      if (input.userId === ctx.session.user.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot delete your own account." })
+      }
+
+      await db.$transaction(async (tx) => {
+        // 1. Delete this user's task completions
+        await tx.taskCompletion.deleteMany({ where: { userId: input.userId } })
+
+        // 2. Delete this user's votes
+        await tx.vote.deleteMany({ where: { userId: input.userId } })
+
+        // 3. Handle user's own replies (on other people's posts/tasks)
+        const userReplies = await tx.reply.findMany({
+          where: { authorId: input.userId },
+          select: { id: true },
+        })
+        const userReplyIds = userReplies.map((r) => r.id)
+        if (userReplyIds.length > 0) {
+          // Re-parent direct children so the NoAction constraint doesn't block deletion
+          await tx.reply.updateMany({
+            where: { parentId: { in: userReplyIds } },
+            data: { parentId: null },
+          })
+          await tx.reply.deleteMany({ where: { authorId: input.userId } })
+        }
+
+        // 4. Delete posts where user is author or target
+        const affectedPosts = await tx.post.findMany({
+          where: { OR: [{ authorId: input.userId }, { targetUserId: input.userId }] },
+          select: { id: true },
+        })
+        const postIds = affectedPosts.map((p) => p.id)
+        if (postIds.length > 0) {
+          // Null all intra-post reply parentId refs before deletion
+          await tx.reply.updateMany({
+            where: { postId: { in: postIds }, parentId: { not: null } },
+            data: { parentId: null },
+          })
+          await tx.reply.deleteMany({ where: { postId: { in: postIds } } })
+          // Votes cascade via Post onDelete:Cascade
+          await tx.post.deleteMany({ where: { id: { in: postIds } } })
+        }
+
+        // 5. Delete tasks created by user
+        const affectedTasks = await tx.task.findMany({
+          where: { adminId: input.userId },
+          select: { id: true },
+        })
+        const taskIds = affectedTasks.map((t) => t.id)
+        if (taskIds.length > 0) {
+          await tx.reply.updateMany({
+            where: { taskId: { in: taskIds }, parentId: { not: null } },
+            data: { parentId: null },
+          })
+          await tx.reply.deleteMany({ where: { taskId: { in: taskIds } } })
+          // TaskCompletions cascade via Task onDelete:Cascade
+          await tx.task.deleteMany({ where: { id: { in: taskIds } } })
+        }
+
+        // 6. Delete user (Account + Session cascade automatically)
+        await tx.user.delete({ where: { id: input.userId } })
+      })
+
+      return { deleted: true }
     }),
 })

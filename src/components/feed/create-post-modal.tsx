@@ -8,7 +8,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { useTRPC } from "@/trpc/client"
 import { createPostSchema } from "@/lib/validation/post"
-import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -28,8 +27,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { UploadButton } from "@/lib/uploadthing"
 import { UserAutocomplete } from "@/components/feed/user-autocomplete"
 
 type CreatePostValues = z.infer<typeof createPostSchema>
@@ -38,12 +35,11 @@ export function CreatePostModal() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined)
 
   const form = useForm<CreatePostValues>({
     // z.coerce.number() gives the resolver an unknown input type; cast to align generics
     resolver: zodResolver(createPostSchema) as Resolver<CreatePostValues>,
-    defaultValues: { type: "AWARD", cpAmount: 1 },
+    defaultValues: { type: "AWARD", cpAmount: 1, title: "", explanation: "" },
   })
 
   const createPost = useMutation(
@@ -51,7 +47,6 @@ export function CreatePostModal() {
       onSuccess: () => {
         setOpen(false)
         form.reset()
-        setMediaUrl(undefined)
         void queryClient.invalidateQueries(trpc.post.getFeed.queryFilter())
       },
       onError: () => {
@@ -61,15 +56,12 @@ export function CreatePostModal() {
   )
 
   function handleOpenChange(v: boolean) {
-    if (!v) {
-      form.reset()
-      setMediaUrl(undefined)
-    }
+    if (!v) form.reset()
     setOpen(v)
   }
 
   function onSubmit(data: CreatePostValues) {
-    createPost.mutate({ ...data, mediaUrl })
+    createPost.mutate(data)
   }
 
   const postType = form.watch("type")
@@ -156,7 +148,7 @@ export function CreatePostModal() {
                   <FormControl>
                     <Textarea
                       rows={4}
-                      placeholder="Describe what happened and why this nomination deserves community agreement."
+                      placeholder="Describe what happened…"
                       {...field}
                     />
                   </FormControl>
@@ -180,35 +172,6 @@ export function CreatePostModal() {
               )}
             />
 
-            {/* Field 6: Media (optional, outside RHF) */}
-            <div className="space-y-2">
-              <Label>Media (optional)</Label>
-              {mediaUrl ? (
-                <div className="flex items-center gap-2 text-sm">
-                  <span>Media attached</span>
-                  <button
-                    type="button"
-                    className="text-destructive hover:underline"
-                    onClick={() => setMediaUrl(undefined)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <UploadButton
-                  endpoint="postMediaUploader"
-                  config={{ cn }}
-                  onClientUploadComplete={(res) => {
-                    const url = res[0]?.url
-                    if (url) setMediaUrl(url)
-                  }}
-                  onUploadError={(err) => {
-                    console.error("Upload failed:", err.message)
-                  }}
-                />
-              )}
-            </div>
-
             {form.formState.errors.root && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.root.message}
@@ -219,10 +182,7 @@ export function CreatePostModal() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  form.reset()
-                  setOpen(false)
-                }}
+                onClick={() => { form.reset(); setOpen(false) }}
               >
                 Discard
               </Button>

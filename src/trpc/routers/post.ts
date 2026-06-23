@@ -140,6 +140,63 @@ export const postRouter = createTRPCRouter({
     }),
 
   /**
+   * Returns cursor-based paginated feed of posts where the caller is the target user.
+   * Same shape as getFeed so PostCard can be reused without modification.
+   */
+  getTaggedFeed: protectedProcedure
+    .input(
+      z.object({
+        cursor: z.string().nullish(),
+        limit: z.number().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const callerId = ctx.session.user.id
+      const { cursor, limit } = input
+
+      const items = await db.post.findMany({
+        where: { targetUserId: callerId, type: { in: ["AWARD", "DEDUCT"] } },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          explanation: true,
+          cpAmount: true,
+          mediaUrl: true,
+          outcome: true,
+          settled: true,
+          votingEndsAt: true,
+          createdAt: true,
+          author: { select: { id: true, name: true, image: true, username: true } },
+          targetUser: { select: { id: true, name: true, image: true, username: true } },
+          votes: { select: { type: true, userId: true } },
+          _count: { select: { replies: true } },
+        },
+      })
+
+      let nextCursor: string | undefined
+      if (items.length > limit) {
+        const nextItem = items.pop()!
+        nextCursor = nextItem.id
+      }
+
+      const mapped = items.map((post) => {
+        const { votes, ...rest } = post
+        return {
+          ...rest,
+          agreeCount: votes.filter((v) => v.type === "AGREE").length,
+          disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
+          userVote: votes.find((v) => v.userId === callerId) ?? null,
+        }
+      })
+
+      return { items: mapped, nextCursor }
+    }),
+
+  /**
    * Returns autocomplete results for target user selection.
    * Excludes the calling user (D-09) and only returns users with a claimed username (D-10).
    * Searches by username and display name (case-insensitive LIKE query).

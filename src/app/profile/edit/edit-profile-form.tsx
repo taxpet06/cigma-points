@@ -31,9 +31,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { UserCircle } from "lucide-react"
-import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { cn } from "@/lib/utils"
 
 // Exported so the TDD schema tests can import it once the GREEN phase is done.
@@ -85,20 +82,6 @@ export function EditProfileForm() {
 
   return (
     <div className="space-y-6">
-      {/* Avatar section */}
-      <div className="flex flex-col items-start gap-3">
-        <Avatar className="h-20 w-20">
-          <AvatarImage
-            src={me?.image ?? undefined}
-            alt={me?.name ? `${me.name}'s profile photo` : "Profile photo"}
-          />
-          <AvatarFallback>
-            <UserCircle aria-hidden="true" className="h-full w-full text-muted-foreground" />
-          </AvatarFallback>
-        </Avatar>
-        <AvatarUpload />
-      </div>
-
       {/* Name + bio form */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

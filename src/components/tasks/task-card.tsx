@@ -7,8 +7,7 @@
 // Security: T-6-15 — explicit select in parent (admin limited to id/name/image; no password/email).
 
 import Link from "next/link"
-import { UserCircle, MessageSquare } from "lucide-react"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { MessageSquare } from "lucide-react"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 
 // ---------------------------------------------------------------------------
@@ -46,14 +45,6 @@ function formatRelativeTime(date: Date): string {
   return rtf.format(-diffDays, "day")
 }
 
-function getMediaType(url: string): "image" | "video" {
-  const lower = url.toLowerCase().split("?")[0]
-  if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || lower.endsWith(".avi")) {
-    return "video"
-  }
-  return "image"
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -87,14 +78,7 @@ export function TaskCard({
           )}
         </div>
 
-        {/* Admin avatar + name (no "→ target" — tasks are admin-authored, D-08) */}
         <div className="flex items-center gap-2 mt-1">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage src={admin.image ?? undefined} alt={`${adminName}'s profile photo`} />
-            <AvatarFallback>
-              <UserCircle className="h-full w-full text-muted-foreground" aria-hidden="true" />
-            </AvatarFallback>
-          </Avatar>
           <span className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{adminName}</span>
           </span>
@@ -109,27 +93,6 @@ export function TaskCard({
         {/* Description */}
         <p className="mt-2 text-sm text-muted-foreground">{description}</p>
 
-        {/* Optional media (max-h-64, same as PostCard) */}
-        {mediaUrl && (
-          <div className="mt-3 rounded-md overflow-hidden">
-            {getMediaType(mediaUrl) === "video" ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video
-                src={mediaUrl}
-                controls
-                className="w-full max-h-64 object-cover"
-                aria-label="Task media"
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={mediaUrl}
-                alt="Task media"
-                className="w-full max-h-64 object-cover"
-              />
-            )}
-          </div>
-        )}
       </CardContent>
 
       <CardFooter className="flex flex-col gap-2 border-t pt-2">

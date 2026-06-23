@@ -7,10 +7,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  UserCircle,
   MessageSquare,
 } from "lucide-react"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { VoteButtons } from "@/components/feed/vote-buttons"
@@ -28,6 +26,7 @@ export interface PostCardProps {
   settled: boolean
   votingEndsAt: Date
   createdAt: Date
+  explanation?: string | null
   author: { id: string; name: string | null; image: string | null }
   targetUser: { id: string; name: string | null; image: string | null }
 
@@ -67,14 +66,6 @@ function formatRelativeTime(date: Date): string {
   return rtf.format(-diffDays, "day")
 }
 
-function getMediaType(url: string): "image" | "video" {
-  const lower = url.toLowerCase().split("?")[0]
-  if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || lower.endsWith(".avi")) {
-    return "video"
-  }
-  return "image"
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -88,6 +79,7 @@ export function PostCard({
   settled,
   votingEndsAt,
   createdAt,
+  explanation,
   author,
   targetUser,
   agreeCount,
@@ -170,12 +162,6 @@ export function PostCard({
         </div>
 
         <div className="flex items-center gap-2 mt-1">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage src={author.image ?? undefined} alt={`${authorName}'s profile photo`} />
-            <AvatarFallback>
-              <UserCircle className="h-full w-full text-muted-foreground" aria-hidden="true" />
-            </AvatarFallback>
-          </Avatar>
           <span className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{authorName}</span>
             {" → "}
@@ -187,27 +173,10 @@ export function PostCard({
       <CardContent className="pb-3">
         <p className="text-base font-semibold">{title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{formatRelativeTime(createdAt)}</p>
-
-        {mediaUrl && (
-          <div className="mt-3 rounded-md overflow-hidden">
-            {getMediaType(mediaUrl) === "video" ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video
-                src={mediaUrl}
-                controls
-                className="w-full max-h-64 object-cover"
-                aria-label="Post media"
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={mediaUrl}
-                alt="Post media"
-                className="w-full max-h-64 object-cover"
-              />
-            )}
-          </div>
+        {explanation && (
+          <p className="mt-2 text-sm text-muted-foreground">{explanation}</p>
         )}
+
       </CardContent>
 
       <CardFooter className="flex flex-col gap-2 border-t pt-2">
