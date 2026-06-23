@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "/snap/node/current/bin/node node_modules/.bin/next dev",
-    "build": "/snap/node/current/bin/node node_modules/.bin/next build",
-    "start": "/snap/node/current/bin/node node_modules/.bin/next start",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint",
-    "db:push": "tsx node_modules/.bin/prisma db push",
-    "db:generate": "tsx node_modules/.bin/prisma generate",
-    "db:migrate": "tsx node_modules/.bin/prisma migrate dev && tsx node_modules/.bin/prisma generate",
-    "db:seed": "node --env-file=.env.local node_modules/.bin/tsx prisma/seed.ts",
-    "test:unit": "/snap/node/current/bin/node node_modules/.bin/vitest run",
-    "test:e2e": "/snap/node/current/bin/node node_modules/.bin/playwright test"
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev && prisma generate",
+    "db:seed": "node --env-file=.env.local tsx prisma/seed.ts",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.2",
