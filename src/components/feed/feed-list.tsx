@@ -140,9 +140,10 @@ export function FeedList() {
 
   return (
     <div className="space-y-4">
-      {items.map((item) => (
+      {items.map((item, i) => (
         <PostCard
           key={item.id}
+          index={i}
           id={item.id}
           type={item.type as "AWARD" | "DEDUCT"}
           title={item.title}

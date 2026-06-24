@@ -79,7 +79,7 @@ export default async function ProfilePage({
               )}
 
               {/* CP balance — text-3xl semibold per UI-SPEC Typography Display role */}
-              <p className="mt-3 text-3xl font-semibold text-foreground tabular-nums">
+              <p className="mt-3 text-2xl font-semibold text-foreground tabular-nums font-mono">
                 {user.cigmaPoints} CP
               </p>
 

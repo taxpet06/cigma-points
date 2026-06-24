@@ -82,16 +82,15 @@ export function ReplyCompose({
     <div id="reply-compose" className="rounded-lg border bg-card p-4 space-y-3">
       {/* "Replying to @username" banner (conditional) */}
       {replyingToUsername && (
-        <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
+        <div className="rounded-md bg-muted px-3 py-1 text-xs text-muted-foreground flex items-center justify-between gap-2">
           <span>Replying to @{replyingToUsername}</span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5"
             aria-label={`Cancel replying to ${replyingToUsername}`}
             onClick={onClearParent}
           >
-            <X className="h-3 w-3" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       )}

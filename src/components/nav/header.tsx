@@ -29,10 +29,12 @@ export function Header() {
   const { data: session, status } = useSession()
   const trpc = useTRPC()
 
-  // Fetch the current user's DB record for live CP balance (protectedProcedure)
+  // Fetch the current user's DB record for live CP balance (protectedProcedure).
+  // Poll every 60s so the balance stays current after cron settlements and admin edits.
   const { data: me, isLoading: meLoading } = useQuery(
     trpc.user.getMe.queryOptions(undefined, {
       enabled: status === "authenticated",
+      refetchInterval: 60_000,
     })
   )
 
@@ -40,7 +42,7 @@ export function Header() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <header className="border-b bg-background sticky top-0 z-10">
+    <header className="border-b bg-background sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Left: app name */}
         <Link

@@ -2,17 +2,17 @@
 name: Cigma Points
 description: Community points and recognition platform for closed groups and teams
 colors:
-  brand-violet: "oklch(0.52 0.20 290)"
+  brand-crimson: "oklch(0.53 0.235 5)"
   ink: "oklch(0.145 0 0)"
   surface: "oklch(1 0 0)"
-  surface-muted: "oklch(0.97 0.008 290)"
-  border-subtle: "oklch(0.922 0.005 290)"
-  text-muted: "oklch(0.556 0.008 290)"
-  accent-fill: "oklch(0.94 0.015 290)"
+  surface-muted: "oklch(0.97 0.008 5)"
+  border-subtle: "oklch(0.922 0.005 5)"
+  text-muted: "oklch(0.556 0.008 5)"
+  accent-fill: "oklch(0.94 0.015 5)"
   semantic-award: "#059669"
   semantic-award-bg: "#ecfdf5"
-  semantic-deduct: "oklch(0.577 0.245 27.325)"
-  semantic-deduct-bg: "#fef2f2"
+  semantic-deduct: "oklch(0.52 0.19 50)"
+  semantic-deduct-bg: "#fffbeb"
   semantic-pending: "#d97706"
 typography:
   body:
@@ -50,12 +50,12 @@ spacing:
   xl: "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.brand-violet}"
+    backgroundColor: "{colors.brand-crimson}"
     textColor: "{colors.surface}"
     rounded: "{rounded.md}"
     padding: "8px 16px"
   button-primary-hover:
-    backgroundColor: "oklch(0.52 0.20 290 / 90%)"
+    backgroundColor: "oklch(0.53 0.235 5 / 90%)"
     textColor: "{colors.surface}"
     rounded: "{rounded.md}"
     padding: "8px 16px"
@@ -107,38 +107,38 @@ This system explicitly rejects social-media clone grammar — no algorithmic fee
 
 ## 2. Colors: The Community Scoreboard Palette
 
-The palette is a vivid violet brand primary (`oklch(0.52 0.20 290)`) on a pure white canvas, with violet micro-tints (+0.005–0.015 chroma at H=290) applied to all neutral surfaces for subconscious brand coherence. The semantic color set (emerald, red, amber) remains the dominant chromatic layer for outcomes; the brand violet claims primary actions, focus rings, the app identity, and interactive states.
+The palette is a vivid crimson brand primary (`oklch(0.53 0.235 5)`) on a pure white canvas, with crimson micro-tints (+0.005–0.015 chroma at H=5) applied to all neutral surfaces for subconscious brand coherence. The semantic color set (emerald, amber) carries outcome meaning; the brand crimson claims primary actions, focus rings, the app identity, and interactive states.
 
 The semantic colors (`semantic-award`, `semantic-deduct`, `semantic-pending`) are expressed as Tailwind utility classes directly in components. They are real design decisions, not accidents.
 
-**The Semantic First Rule.** The semantic set (emerald = Award/Agree outcomes, red = Deduct/Disagree/Error, amber = Pending) carries outcome meaning. Brand violet is reserved for primary actions and interactive states — never for outcome signals.
+**The Semantic First Rule.** The semantic set (emerald = Award/Agree outcomes, amber = Deduct/Disagree/Error, amber-600 = Pending) carries outcome meaning. Brand crimson is reserved for primary actions and interactive states — never for outcome signals.
 
 ### Primary
 
-- **Brand Violet** (`oklch(0.52 0.20 290)` / vivid blue-shifted violet): `--primary` in CSS. Primary action buttons (Create Post, Sign Up, Agree vote active), the "Cigma Points" app name in the header, and focus rings. White text (`oklch(0.985 0 0)`) is required on this fill — the Helmholtz-Kohlrausch effect makes dark text on a saturated mid-luminance fill read muddy.
-- **Accent Fill** (`oklch(0.94 0.015 290)` / very light violet): `--accent` in CSS. Ghost button hover fill and interactive surface tints. Below conscious perception as color; present as brand coherence.
+- **Brand Crimson** (`oklch(0.53 0.235 5)` / cool blueish-red, 22° toward magenta from sRGB red): `--primary` in CSS. Primary action buttons (Create Post, Sign Up, Agree vote active), the "Cigma Points" app name in the header, and focus rings. White text (`oklch(0.985 0 0)`) is required on this fill — contrast 5.3:1.
+- **Accent Fill** (`oklch(0.94 0.015 5)` / very light crimson tint): `--accent` in CSS. Ghost button hover fill and interactive surface tints. Below conscious perception as color; present as brand coherence.
 - **Ink** (`oklch(0.145 0 0)` / near-black): Default text. All body copy, headings, and labels on light surfaces.
 
-### Neutral (violet-tinted)
+### Neutral (crimson-tinted)
 
-All neutral surfaces carry a micro-tint toward H=290 — subconscious brand coherence, not visible as "tinted."
+All neutral surfaces carry a micro-tint toward H=5 — subconscious brand coherence, not visible as "tinted."
 
-- **Pure Surface** (`oklch(1 0 0)` / white): Page background and card faces. Untinted — brand violet's vividness comes from contrast against a clean white canvas.
-- **Muted Surface** (`oklch(0.97 0.008 290)` / violet-tinted near-white): Ghost button hover, badge backgrounds, empty state fills.
-- **Subtle Border** (`oklch(0.922 0.005 290)` / hairline violet tint): Card outlines, input borders, dividers.
-- **Text Muted** (`oklch(0.556 0.008 290)` / violet-tinted medium gray): Timestamps, metadata, helper copy. At the 4.5:1 contrast floor on white. Never lighten further.
+- **Pure Surface** (`oklch(1 0 0)` / white): Page background and card faces. Untinted — brand crimson's vividness comes from contrast against a clean white canvas.
+- **Muted Surface** (`oklch(0.97 0.008 5)` / crimson-tinted near-white): Ghost button hover, badge backgrounds, empty state fills.
+- **Subtle Border** (`oklch(0.922 0.005 5)` / hairline crimson tint): Card outlines, input borders, dividers.
+- **Text Muted** (`oklch(0.556 0.008 5)` / crimson-tinted medium gray): Timestamps, metadata, helper copy. At the 4.5:1 contrast floor on white. Never lighten further.
 
 ### Semantic
 
 - **Award / Agree** (`#059669` / emerald-600 on `#ecfdf5` / emerald-50 bg): Award post type badge, "Awarded" outcome indicator.
-- **Deduct / Disagree / Error** (`oklch(0.577 0.245 27.325)` on `#fef2f2` bg): Deduct post type badge, Disagree vote button active state, destructive actions, form errors. Note: `text-red-600` is used in some badge contexts — consolidate to `--destructive` on the next refactor pass.
+- **Deduct / Disagree / Error** (`oklch(0.52 0.19 50)` / deep amber-gold on `#fffbeb` / amber-50 bg): Deduct post type badge (`text-amber-700 bg-amber-50`), Disagree vote button active state (`variant="destructive"`), form errors (`text-destructive`). Contrast 5.5:1 on white.
 - **Pending** (`#d97706` / amber-600): Unsettled post state — clock icon + "Pending" text. No fill background.
 
-**The No Chroma Creep Rule.** Do not introduce chromatic colors outside the brand violet and semantic set without a formal token decision.
+**The No Chroma Creep Rule.** Do not introduce chromatic colors outside the brand crimson and semantic set without a formal token decision.
 
 ### Dark Mode
 
-Dark mode carries brand violet through consistently. Page bg is violet-tinted near-black (`oklch(0.145 0.010 290)`); cards step to `oklch(0.205 0.012 290)`; brand violet primary stays identical at `oklch(0.52 0.20 290)` — it works against both white and near-black. Focus ring brightens to `oklch(0.68 0.20 290)` for dark-surface visibility. Destructive red adjusts to `oklch(0.704 0.191 22.216)`.
+Dark mode carries brand crimson through consistently. Page bg is crimson-tinted near-black (`oklch(0.145 0.010 5)`); cards step to `oklch(0.205 0.012 5)`; brand crimson primary stays identical at `oklch(0.53 0.235 5)` — it works against both white and near-black. Focus ring brightens to `oklch(0.68 0.20 5)` for dark-surface visibility. Destructive amber brightens to `oklch(0.73 0.18 57)` with dark ink text for dark-mode button fills.
 
 ## 3. Typography
 
@@ -177,11 +177,11 @@ This system is flat by default. No `box-shadow` declarations appear in the curre
 **Bold and clear — no ambiguity about what's interactive.**
 
 - **Shape:** `rounded-md` (8px). Not pill, not square. Consistent across all variants. No size variation on border-radius.
-- **Primary:** Brand violet fill (`oklch(0.52 0.20 290)`) + white text. `h-10 px-4 py-2` (default), `h-9 px-3` (sm). Hover: 90% opacity.
+- **Primary:** Brand crimson fill (`oklch(0.53 0.235 5)`) + white text. `h-11 px-4 py-2` (default), `h-10 px-3` (sm). Hover: 90% opacity.
 - **Outline:** White fill + `border-subtle` border + ink text. Hover: fills with `surface-muted`. Secondary action alongside a primary.
-- **Destructive:** Red fill (`oklch(0.577 0.245 27.325)`) + white text. Disagree vote and destructive actions only.
+- **Destructive:** Deep amber fill (`oklch(0.52 0.19 50)`) + white text. Disagree vote and destructive actions only.
 - **Ghost:** Transparent + ink text. Hover: `surface-muted` fill. Navigation icon buttons, utility actions.
-- **Focus:** `ring-2` at `oklch(0.52 0.20 290)` (brand violet) with `ring-offset-2`. Keyboard-visible; same ring across all variants.
+- **Focus:** `ring-2` at `oklch(0.53 0.235 5)` (brand crimson) with `ring-offset-2`. Keyboard-visible; same ring across all variants.
 - **Disabled:** 50% opacity, `pointer-events-none`. Never a different color.
 
 ### Vote Buttons (Signature Component)
@@ -189,8 +189,8 @@ This system is flat by default. No `box-shadow` declarations appear in the curre
 The most important interaction in the product.
 
 - **Layout:** Full-width, space-between, inside the post card footer (`CardFooter`). Agree on the left, Disagree on the right.
-- **Active Agree:** `button-primary` (brand violet fill). ThumbsUp icon + count. `aria-pressed="true"`.
-- **Active Disagree:** `button-destructive` (red fill). ThumbsDown icon + count. `aria-pressed="true"`.
+- **Active Agree:** `button-primary` (brand crimson fill). ThumbsUp icon + count. `aria-pressed="true"`.
+- **Active Disagree:** `button-destructive` (amber fill). ThumbsDown icon + count. `aria-pressed="true"`.
 - **Inactive (both):** `button-outline`. Equal visual weight when neither is cast.
 - **Closed voting:** Text-only summary (`"Agree: N  Disagree: N"` in `text-muted`). No buttons rendered.
 - **Pending mutation:** Both buttons `disabled` while the vote is in flight.
@@ -203,7 +203,7 @@ The feed is a list of these. Each must be scannable in under two seconds.
 
 - **Shape:** `rounded-lg` (10px), `border-subtle` border (1px), white background. No shadow.
 - **Header (`CardHeader`):** Type badge + CP amount (bold, `±N CP`) + outcome badge right-aligned.
-- **Type badge:** Full-pill (`rounded-full`, `px-2 py-0.5 text-xs font-semibold`). Emerald bg/text for Award; red bg/text for Deduct. TypeIcon (ArrowUpCircle / ArrowDownCircle) + label.
+- **Type badge:** Full-pill (`rounded-full`, `px-2 py-0.5 text-xs font-semibold`). Emerald bg/text for Award; amber bg/text (`text-amber-700 bg-amber-50`) for Deduct. TypeIcon (ArrowUpCircle / ArrowDownCircle) + label.
 - **Outcome indicator:** Icon + text inline, no pill background. Clock + amber "Pending"; CheckCircle2 + emerald "Awarded"; XCircle + muted "Rejected".
 - **Author line:** `"Author → Target"` — names bolded inline within muted-foreground text.
 - **Body (`CardContent`):** Post title in `font-semibold`, timestamp in `text-muted text-sm`, explanation in `text-muted text-sm` below.
@@ -214,13 +214,13 @@ The feed is a list of these. Each must be scannable in under two seconds.
 
 ### Semantic Badges
 
-- **Type badge (Award / Deduct):** Full pill, `text-xs font-semibold`. Emerald or red fill. Icon + label. `aria-label` describes the type for screen readers.
+- **Type badge (Award / Deduct):** Full pill, `text-xs font-semibold`. Emerald fill for Award; amber fill for Deduct. Icon + label. `aria-label` describes the type for screen readers.
 - **Do not badge-stack.** The type badge and outcome indicator are different visual weights intentionally: pill badge for type, icon+text for outcome. Never two adjacent pill badges in contrasting colors on the same card.
 
 ### Navigation Header
 
 - **Container:** `h-14` (56px), sticky top (`z-10`), white bg / zinc-950 dark, `border-b`.
-- **App name:** "Cigma Points" in Inter 600, `text-lg tracking-tight`, `text-primary` (brand violet). Left-anchored — the only brand color in the header chrome.
+- **App name:** "Cigma Points" in Inter 600, `text-lg tracking-tight`, `text-primary` (brand crimson). Left-anchored — the only brand color in the header chrome.
 - **CP Balance:** `N CP` in Inter 500 `text-sm`. The user's live score — tabular feel, not a decorative badge. Candidate for JetBrains Mono in a more polished pass.
 - **Profile / theme toggle / dropdown:** Icon buttons using ghost variant. 40px touch targets.
 
@@ -229,13 +229,13 @@ The feed is a list of these. Each must be scannable in under two seconds.
 - **Style:** White bg, `border-subtle` stroke (1px), `rounded-md` (8px).
 - **Focus:** Ring-2 at `oklch(0.708 0 0)`, ring-offset-background. Border stays the same on focus; the ring appears outside.
 - **Placeholder:** `text-muted` (`oklch(0.556 0 0)`). At the 4.5:1 floor. Never lighter.
-- **Error:** Red border + error text below in red. The input does not change background color.
+- **Error:** Amber border + error text below in `text-destructive` (amber). The input does not change background color.
 - **Disabled:** 50% opacity.
 
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** use semantic colors to carry outcome meaning — emerald for Award/Agree/Awarded, red for Deduct/Disagree/Error, amber for Pending. These are the only committed chromatic colors.
+- **Do** use semantic colors to carry outcome meaning — emerald for Award/Agree/Awarded, amber for Deduct/Disagree/Error, amber-600 for Pending. These are the only committed chromatic colors. Brand crimson is for primary actions only.
 - **Do** keep post card surfaces flat with `border-subtle` (1px) as the sole depth cue. No card shadows.
 - **Do** use Inter 500 (label weight) for all button text, badge text, and interactive labels.
 - **Do** make vote buttons full-width and full-fill when active. Half-measures on the core interaction are not acceptable.

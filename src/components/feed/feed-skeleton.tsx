@@ -4,25 +4,26 @@ export function FeedSkeleton({ count = 3 }: { count?: number }) {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <Card key={i}>
-          <CardHeader>
-            <div className="animate-pulse space-y-2">
-              <div className="h-4 w-20 bg-muted rounded" />
-              <div className="flex items-center gap-3 mt-2">
-                <div className="h-10 w-10 bg-muted rounded-full" />
-                <div className="space-y-1">
-                  <div className="h-4 w-48 bg-muted rounded" />
-                  <div className="h-3 w-32 bg-muted rounded" />
-                </div>
-              </div>
+        <Card key={i} className="animate-pulse">
+          <CardHeader className="pb-3">
+            {/* type badge + CP amount + outcome — matches PostCard header row */}
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-16 rounded-full bg-muted" />
+              <div className="h-5 w-10 rounded bg-muted" />
+              <div className="ml-auto h-4 w-14 rounded bg-muted" />
             </div>
+            {/* author → target */}
+            <div className="mt-1 h-4 w-44 rounded bg-muted" />
           </CardHeader>
-          <CardContent>
-            <div className="animate-pulse h-3 w-40 bg-muted rounded" />
+          <CardContent className="pb-3 space-y-2">
+            <div className="h-5 w-3/4 rounded bg-muted" />
+            <div className="h-4 w-24 rounded bg-muted" />
           </CardContent>
-          <CardFooter>
-            <div className="animate-pulse border-t mt-3 pt-3 w-full">
-              <div className="h-3 w-24 bg-muted rounded" />
+          <CardFooter className="flex-col gap-2 border-t pt-2">
+            {/* vote button placeholders */}
+            <div className="flex w-full gap-2">
+              <div className="h-11 flex-1 rounded-md bg-muted" />
+              <div className="h-11 flex-1 rounded-md bg-muted" />
             </div>
           </CardFooter>
         </Card>

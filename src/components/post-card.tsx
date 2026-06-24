@@ -44,6 +44,9 @@ export interface PostCardProps {
   // Other optional props
   mediaUrl?: string
   replyCount?: number
+
+  // Position in its list — drives the staggered entrance delay
+  index?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +74,7 @@ export function PostCard({
   isPending,
   mediaUrl,
   replyCount,
+  index = 0,
 }: PostCardProps) {
   const isAward = type === "AWARD"
   const isDeduct = type === "DEDUCT"
@@ -78,8 +82,8 @@ export function PostCard({
   const typeBadgeClasses = cn(
     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
     {
-      "text-emerald-600 bg-emerald-50": isAward,
-      "text-red-600 bg-red-50": isDeduct,
+      "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/50": isAward,
+      "text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/50": isDeduct,
       "text-muted-foreground bg-muted": !isAward && !isDeduct,
     }
   )
@@ -91,14 +95,14 @@ export function PostCard({
   let outcomeBadge: React.ReactNode
   if (!settled) {
     outcomeBadge = (
-      <span className="inline-flex items-center gap-1 text-sm text-amber-600">
+      <span className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
         <Clock className="h-4 w-4" />
         Pending
       </span>
     )
   } else if (outcome === "Awarded") {
     outcomeBadge = (
-      <span className="inline-flex items-center gap-1 text-sm text-emerald-600">
+      <span className="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 className="h-4 w-4" />
         Awarded
       </span>
@@ -134,7 +138,10 @@ export function PostCard({
     currentUserId !== author.id
 
   return (
-    <Card>
+    <Card
+      className="animate-card-rise transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+      style={{ "--i": index % 6 } as React.CSSProperties}
+    >
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className={typeBadgeClasses} aria-label={typeBadgeAriaLabel}>
@@ -142,7 +149,7 @@ export function PostCard({
             {typeBadgeLabel}
           </span>
           <span className="text-sm font-semibold font-mono tabular-nums">
-            {cpAmount > 0 ? "+" : ""}
+            {isAward ? "+" : isDeduct ? "-" : ""}
             {cpAmount} CP
           </span>
           <span className="ml-auto">{outcomeBadge}</span>
@@ -194,7 +201,7 @@ export function PostCard({
             <Link
               href={`/post/${id}`}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors min-h-[44px]",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-[transform,background-color,border-color,color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95 min-h-[44px]",
                 replyCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
                   : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"

@@ -13,6 +13,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useTRPC } from "@/trpc/client"
 import { PostCard } from "@/components/post-card"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Tabs,
   TabsList,
@@ -27,28 +28,25 @@ import { Button } from "@/components/ui/button"
 
 function SkeletonCard() {
   return (
-    <div className="rounded-lg border bg-card shadow-sm animate-pulse">
-      <div className="p-6 pb-3 space-y-3">
-        {/* Badge row */}
-        <div className="flex gap-2">
-          <div className="h-5 w-16 rounded-full bg-muted" />
-          <div className="h-5 w-12 rounded bg-muted" />
-        </div>
-        {/* Avatar + name row */}
+    <Card className="animate-pulse">
+      <CardHeader className="pb-3">
+        {/* type badge + CP amount + outcome — matches PostCard header row */}
         <div className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-full bg-muted shrink-0" />
-          <div className="h-4 w-48 rounded bg-muted" />
+          <div className="h-5 w-16 rounded-full bg-muted" />
+          <div className="h-5 w-10 rounded bg-muted" />
+          <div className="ml-auto h-4 w-14 rounded bg-muted" />
         </div>
-      </div>
-      <div className="px-6 pb-3 space-y-2">
+        {/* author → target */}
+        <div className="mt-1 h-4 w-44 rounded bg-muted" />
+      </CardHeader>
+      <CardContent className="pb-3 space-y-2">
         <div className="h-5 w-3/4 rounded bg-muted" />
         <div className="h-4 w-24 rounded bg-muted" />
-      </div>
-      <div className="px-6 pt-3 pb-6 border-t flex justify-between">
-        <div className="h-4 w-20 rounded bg-muted" />
-        <div className="h-4 w-32 rounded bg-muted" />
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter className="border-t pt-2">
+        <div className="h-4 w-28 rounded bg-muted" />
+      </CardFooter>
+    </Card>
   )
 }
 

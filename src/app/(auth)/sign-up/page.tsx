@@ -35,7 +35,7 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm animate-card-rise">
         <CardHeader>
           <CardTitle className="text-2xl">Create an account</CardTitle>
           <CardDescription>
@@ -80,7 +80,7 @@ export default function SignUpPage() {
             </div>
 
             {error && (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+              <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -90,11 +90,11 @@ export default function SignUpPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
               href="/sign-in"
-              className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline"
+              className="font-medium text-foreground hover:underline"
             >
               Sign in
             </Link>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Controller, useForm, type Resolver } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -31,7 +31,7 @@ import { UserAutocomplete } from "@/components/feed/user-autocomplete"
 
 type CreatePostValues = z.infer<typeof createPostSchema>
 
-export function CreatePostModal() {
+export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {}) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -69,30 +69,47 @@ export function CreatePostModal() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="default" className="w-full sm:w-auto">
-          Create Post
-        </Button>
+        {trigger ?? (
+          <Button variant="default" className="w-full sm:w-auto">
+            Create Post
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          // The autocomplete dropdown portals to document.body. Radix's
+          // onInteractOutside fires on pointerdown — before onClick — and treats the
+          // portaled dropdown as "outside" the dialog. e.target here is the
+          // DismissableLayer div (not the clicked element), so contains() is useless.
+          // Instead: if the listbox node is currently in the DOM, the dropdown is open
+          // and any click should be allowed to complete before the dialog can close.
+          if (document.getElementById("user-search-listbox") !== null) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create Post</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Field 1: Award/Deduct toggle */}
-            <div className="flex gap-2">
+            <div role="group" aria-label="Post type" className="flex gap-2">
               <Button
                 type="button"
                 variant={postType === "AWARD" ? "default" : "outline"}
                 className="w-full"
+                aria-pressed={postType === "AWARD"}
                 onClick={() => form.setValue("type", "AWARD")}
               >
                 Award
               </Button>
               <Button
                 type="button"
-                variant={postType === "DEDUCT" ? "default" : "outline"}
+                variant={postType === "DEDUCT" ? "destructive" : "outline"}
                 className="w-full"
+                aria-pressed={postType === "DEDUCT"}
                 onClick={() => form.setValue("type", "DEDUCT")}
               >
                 Deduct
@@ -103,19 +120,13 @@ export function CreatePostModal() {
             <FormField
               control={form.control}
               name="targetUserId"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Target user</FormLabel>
                   <FormControl>
-                    <Controller
-                      control={form.control}
-                      name="targetUserId"
-                      render={({ field }) => (
-                        <UserAutocomplete
-                          value={field.value ?? null}
-                          onChange={field.onChange}
-                        />
-                      )}
+                    <UserAutocomplete
+                      value={field.value ?? null}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -173,7 +184,7 @@ export function CreatePostModal() {
             />
 
             {form.formState.errors.root && (
-              <p className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-destructive">
                 {form.formState.errors.root.message}
               </p>
             )}
