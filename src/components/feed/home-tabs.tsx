@@ -5,7 +5,9 @@ import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from "@tansta
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { RefreshCw } from "lucide-react"
+import Link from "next/link"
 import { useTRPC } from "@/trpc/client"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FeedList } from "@/components/feed/feed-list"
 import { FeedSkeleton } from "@/components/feed/feed-skeleton"
 import { PostCard } from "@/components/post-card"
@@ -207,8 +209,52 @@ function TasksList() {
   )
 }
 
+function PeopleList() {
+  const trpc = useTRPC()
+  const { data: users, isLoading } = useQuery(trpc.user.getAll.queryOptions())
+
+  if (isLoading) return <FeedSkeleton count={6} />
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-xl font-semibold mb-2">No members yet.</p>
+        <p className="text-sm text-muted-foreground">Check back soon.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {users.map((user) => (
+        <Link
+          key={user.id}
+          href={user.username ? `/u/${user.username}` : "#"}
+          className="flex flex-col items-center gap-2 rounded-xl border p-4 text-center hover:bg-muted/50 transition-colors"
+        >
+          <Avatar className="h-12 w-12">
+            <AvatarImage src={user.image ?? undefined} alt={user.name ?? "User"} />
+            <AvatarFallback className="text-base font-semibold">
+              {(user.name ?? "?")[0]?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="w-full min-w-0">
+            <p className="truncate text-sm font-medium leading-tight">{user.name ?? "Unnamed"}</p>
+            {user.username && (
+              <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
+            )}
+            <p className="mt-1 text-xs font-semibold tabular-nums">
+              {user.cigmaPoints} CP
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
 export function HomeTabs() {
-  const [tab, setTab] = useState<"posts" | "tags" | "tasks">("posts")
+  const [tab, setTab] = useState<"posts" | "tags" | "tasks" | "people">("posts")
   const [refreshing, setRefreshing] = useState(false)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -220,8 +266,10 @@ export function HomeTabs() {
         await queryClient.refetchQueries(trpc.post.getFeed.infiniteQueryFilter({ limit: 20 }))
       } else if (tab === "tags") {
         await queryClient.refetchQueries(trpc.post.getTaggedFeed.infiniteQueryFilter({ limit: 20 }))
-      } else {
+      } else if (tab === "tasks") {
         await queryClient.refetchQueries(trpc.task.getTasks.queryFilter())
+      } else {
+        await queryClient.refetchQueries(trpc.user.getAll.queryFilter())
       }
     } finally {
       setRefreshing(false)
@@ -231,7 +279,7 @@ export function HomeTabs() {
   return (
     <>
       <div className="flex items-center border-b">
-        {(["posts", "tags", "tasks"] as const).map((t) => (
+        {(["posts", "tags", "tasks", "people"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -257,6 +305,7 @@ export function HomeTabs() {
       {tab === "posts" && <FeedList />}
       {tab === "tags" && <TaggedFeedList />}
       {tab === "tasks" && <TasksList />}
+      {tab === "people" && <PeopleList />}
     </>
   )
 }

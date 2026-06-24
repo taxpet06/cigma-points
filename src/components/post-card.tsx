@@ -206,9 +206,14 @@ export function PostCard({
           <div className="flex w-full items-center">
             <Link
               href={`/post/${id}`}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors",
+                replyCount > 0
+                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                  : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+              )}
             >
-              <MessageSquare className="h-4 w-4" aria-hidden="true" />
+              <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
               {replyCount === 0
                 ? "Reply"
                 : `${replyCount} ${replyCount === 1 ? "Reply" : "Replies"}`}

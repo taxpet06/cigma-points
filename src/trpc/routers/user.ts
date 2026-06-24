@@ -131,6 +131,26 @@ export const userRouter = createTRPCRouter({
     }),
 
   /**
+   * Returns all users with public-safe fields for the People directory.
+   * Requires a valid session — community members only, not public.
+   * Excludes email, password, role, and auth relations.
+   * Ordered by name ascending for stable alphabetical browsing.
+   */
+  getAll: protectedProcedure.query(async () => {
+    return db.user.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        image: true,
+        bio: true,
+        cigmaPoints: true,
+      },
+    })
+  }),
+
+  /**
    * Returns cursor-based paginated post history for a user.
    * Public: any visitor (authenticated or not) may query any userId — intentional for public profiles.
    * If private posts are introduced in a future phase, add a visibility filter here.

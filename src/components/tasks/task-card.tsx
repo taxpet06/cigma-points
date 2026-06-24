@@ -100,9 +100,13 @@ export function TaskCard({
         <div className="flex w-full items-center">
           <Link
             href={`/tasks/${id}`}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className={
+              replyCount != null && replyCount > 0
+                ? "inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+                : "inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+            }
           >
-            <MessageSquare className="h-4 w-4" aria-hidden="true" />
+            <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
             {replyCount == null || replyCount === 0
               ? "Reply"
               : replyCount === 1
