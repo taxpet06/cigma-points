@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { CpLogo } from "@/components/nav/cp-logo"
 import { UserCircle, Sun, Moon, ChevronDown } from "lucide-react"
 
 export function Header() {
@@ -44,12 +45,13 @@ export function Header() {
   return (
     <header className="border-b bg-background sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Left: app name */}
+        {/* Left: app logo (CP monogram) */}
         <Link
           href="/"
-          className="font-semibold text-lg tracking-tight text-primary"
+          aria-label="Cigma Points — home"
+          className="flex items-center -ml-0.5"
         >
-          Cigma Points
+          <CpLogo className="h-7 w-auto" />
         </Link>
 
         {/* Right: auth-aware actions */}
