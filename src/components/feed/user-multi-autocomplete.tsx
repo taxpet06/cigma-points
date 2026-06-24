@@ -115,7 +115,7 @@ export function UserMultiAutocomplete({
                   onClick={() => addUser(user)}
                 >
                   <span>{user.name}</span>
-                  <span className="text-muted-foreground">@{user.username}</span>
+                  {user.username && <span className="text-muted-foreground">@{user.username}</span>}
                 </button>
               ))
             )}

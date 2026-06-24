@@ -3,7 +3,7 @@
 // Procedures:
 //   createPost    — creates an AWARD or DEDUCT post; authorId always from session (never client input)
 //   getFeed       — cursor-based paginated feed of AWARD + DEDUCT posts ordered by createdAt desc
-//   searchUsers   — debounced autocomplete search; excludes self; only users with claimed username
+//   searchUsers   — debounced autocomplete search; excludes self; searches name and username
 //
 // Security:
 //   T-03-01 — createPost: authorId = ctx.session.user.id (never from client input)
@@ -11,7 +11,7 @@
 //   T-03-03 — createPost: target user verified to exist and have a username before db.post.create
 //   T-03-04 — createPost: votingEndsAt set server-side (Date.now() + 24h); absent from input schema
 //   T-03-05 — getFeed / searchUsers: protectedProcedure — UNAUTHORIZED before any DB access
-//   T-03-06 — searchUsers: excludes self (id: { not: callerId }); only username-claimed users
+//   T-03-06 — searchUsers: excludes self (id: { not: callerId })
 
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
@@ -205,13 +205,13 @@ export const postRouter = createTRPCRouter({
 
   /**
    * Returns autocomplete results for target user selection.
-   * Excludes the calling user (D-09) and only returns users with a claimed username (D-10).
-   * Searches by username and display name (case-insensitive LIKE query).
-   * Capped at 8 results for autocomplete dropdown performance.
+   * Excludes the calling user (T-03-06 / D-09). Searches by display name and username
+   * (case-insensitive LIKE query). Users without a claimed username are included — they
+   * appear by display name only. Capped at 8 results for autocomplete dropdown performance.
    *
    * Performance note: `contains: mode: "insensitive"` generates ILIKE '%query%'. At MVP scale
    * (hundreds of users) this is acceptable. If the user base grows to tens of thousands, add
-   * a @@index([username]) or switch to Postgres full-text search.
+   * a @@index([name, username]) or switch to Postgres full-text search.
    */
   searchUsers: protectedProcedure
     .input(
@@ -226,11 +226,10 @@ export const postRouter = createTRPCRouter({
         where: {
           AND: [
             { id: { not: callerId } }, // exclude self (T-03-06 / D-09)
-            { username: { not: null } }, // only users with a claimed username (D-10)
             {
               OR: [
-                { username: { contains: input.query, mode: "insensitive" } },
                 { name: { contains: input.query, mode: "insensitive" } },
+                { username: { contains: input.query, mode: "insensitive" } },
               ],
             },
           ],
@@ -242,7 +241,7 @@ export const postRouter = createTRPCRouter({
           username: true,
           image: true,
         },
-        orderBy: { username: "asc" },
+        orderBy: { name: "asc" },
       })
     }),
 
