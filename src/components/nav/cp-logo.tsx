@@ -2,11 +2,12 @@
 // Red gradient letterforms on a transparent background, for use in the header.
 // viewBox is cropped tight to the letters' ink bounds so it sizes cleanly by height.
 
-export function CpLogo({ className }: { className?: string }) {
+export function CpLogo({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <svg
       viewBox="64 136 388 260"
       className={className}
+      style={style}
       role="img"
       aria-label="Cigma Points"
       xmlns="http://www.w3.org/2000/svg"

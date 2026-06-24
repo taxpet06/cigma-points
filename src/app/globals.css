@@ -141,11 +141,15 @@
      z-index:-1) renders above it; <body> is transparent so the pattern shows through. */
   html {
     @apply font-sans bg-background;
+    /* Suppress the browser's native pull-to-refresh / overscroll glow so the
+       app's own PullToRefresh indicator is the only one shown. */
+    overscroll-behavior-y: none;
   }
   body {
     @apply text-foreground;
     background: transparent;
     padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior-y: none;
   }
 }
 

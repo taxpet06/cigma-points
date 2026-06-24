@@ -5,7 +5,7 @@
 // onRefresh. Replaces the old manual refresh button.
 
 import { useEffect, useRef, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { CpLogo } from "@/components/nav/cp-logo"
 import { cn } from "@/lib/utils"
 
 const THRESHOLD = 64 // px of pull needed to trigger
@@ -102,8 +102,8 @@ export function PullToRefresh({
         }}
       >
         <div className="mt-2 flex h-9 w-9 items-center justify-center rounded-full border bg-background shadow-md">
-          <RefreshCw
-            className={cn("h-4 w-4 text-primary", refreshing && "animate-spin")}
+          <CpLogo
+            className={cn("h-4 w-auto", refreshing && "animate-spin")}
             style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)` }}
           />
         </div>
