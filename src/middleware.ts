@@ -39,8 +39,8 @@ export default NextAuth(authConfig).auth((req) => {
 })
 
 export const config = {
-  // Exclude NextAuth's own handlers and Next.js static assets.
-  // All other routes (pages + /api/*) are covered — admin tRPC still re-checks
-  // server-side via requireAdmin() (Pitfall 4 compliance).
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // Exclude NextAuth's own handlers, cron routes (secured by CRON_SECRET instead),
+  // and Next.js static assets. All other routes (pages + /api/*) are covered —
+  // admin tRPC still re-checks server-side via requireAdmin() (Pitfall 4 compliance).
+  matcher: ["/((?!api/auth|api/cron|_next/static|_next/image|favicon.ico).*)"],
 }

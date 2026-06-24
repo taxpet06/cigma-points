@@ -8,28 +8,8 @@
 import { Reply } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, formatRelativeTime } from "@/lib/utils"
 import type { ReplyNode } from "@/components/thread/reply-thread"
-
-// ---------------------------------------------------------------------------
-// Helpers (copied from post-card.tsx — do not reimplement)
-// ---------------------------------------------------------------------------
-
-function formatRelativeTime(date: Date): string {
-  const now = Date.now()
-  const diffMs = now - date.getTime()
-  const diffSeconds = Math.round(diffMs / 1000)
-  const diffMinutes = Math.round(diffSeconds / 60)
-  const diffHours = Math.round(diffMinutes / 60)
-  const diffDays = Math.round(diffHours / 24)
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
-
-  if (Math.abs(diffSeconds) < 60) return rtf.format(-diffSeconds, "second")
-  if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute")
-  if (Math.abs(diffHours) < 24) return rtf.format(-diffHours, "hour")
-  return rtf.format(-diffDays, "day")
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -54,19 +34,19 @@ export function ReplyCard({ reply, depth, onReply }: ReplyCardProps) {
     <div>
       <Card className="mb-2">
         <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{displayName}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-medium truncate">{displayName}</span>
             {reply.author.username && (
-              <span className="text-xs text-muted-foreground">@{reply.author.username}</span>
+              <span className="text-xs text-muted-foreground truncate max-w-[6rem] shrink-0">@{reply.author.username}</span>
             )}
-            <span className="text-xs text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto shrink-0 whitespace-nowrap pl-1">
               {formatRelativeTime(reply.createdAt)}
             </span>
           </div>
         </CardHeader>
 
         <CardContent className="pt-0 pb-2">
-          <p className="text-sm">{reply.content}</p>
+          <p className="text-sm break-words text-pretty">{reply.content}</p>
 
 
           <div className="flex justify-end mt-1">

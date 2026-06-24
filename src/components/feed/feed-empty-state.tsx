@@ -1,15 +1,13 @@
-import { Button } from "@/components/ui/button"
+import { CreatePostModal } from "@/components/feed/create-post-modal"
 
-export function FeedEmptyState({ onCreatePost }: { onCreatePost?: () => void }) {
+export function FeedEmptyState() {
   return (
-    <div className="py-16 text-center" role="status">
+    <div className="py-16 text-center">
       <h2 className="text-xl font-semibold mb-2">No posts yet.</h2>
       <p className="text-sm text-muted-foreground mb-6">
         Be the first to award or deduct points.
       </p>
-      <Button variant="default" onClick={onCreatePost}>
-        Create Post
-      </Button>
+      <CreatePostModal />
     </div>
   )
 }

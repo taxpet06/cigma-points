@@ -6,12 +6,14 @@ import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { RefreshCw } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FeedList } from "@/components/feed/feed-list"
 import { FeedSkeleton } from "@/components/feed/feed-skeleton"
 import { PostCard } from "@/components/post-card"
 import { TaskCard } from "@/components/tasks/task-card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 function TaggedFeedList() {
   const trpc = useTRPC()
@@ -21,7 +23,7 @@ function TaggedFeedList() {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
     ...trpc.post.getTaggedFeed.infiniteQueryOptions(
       { limit: 20 },
       { getNextPageParam: (lastPage) => lastPage.nextCursor }
@@ -129,6 +131,20 @@ function TaggedFeedList() {
 
   if (isLoading) return <FeedSkeleton count={3} />
 
+  if (isError) {
+    return (
+      <div role="alert" className="py-16 text-center">
+        <p className="text-sm font-medium mb-3">Couldn&apos;t load tagged posts.</p>
+        <button
+          onClick={() => void refetch()}
+          className="text-sm text-primary underline underline-offset-2 cursor-pointer hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
@@ -175,14 +191,28 @@ function TaggedFeedList() {
 
 function TasksList() {
   const trpc = useTRPC()
-  const { data: tasks, isLoading } = useQuery(trpc.task.getTasks.queryOptions())
+  const { data: tasks, isLoading, isError, refetch } = useQuery(trpc.task.getTasks.queryOptions())
 
   if (isLoading) return <FeedSkeleton count={3} />
+
+  if (isError) {
+    return (
+      <div role="alert" className="py-16 text-center">
+        <p className="text-sm font-medium mb-3">Couldn&apos;t load tasks.</p>
+        <button
+          onClick={() => void refetch()}
+          className="text-sm text-primary underline underline-offset-2 cursor-pointer hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   if (!tasks || tasks.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-xl font-semibold mb-2">No tasks yet.</p>
+        <h2 className="text-xl font-semibold mb-2">No tasks yet.</h2>
         <p className="text-sm text-muted-foreground">
           Check back later for tasks you can complete to earn CP.
         </p>
@@ -211,44 +241,70 @@ function TasksList() {
 
 function PeopleList() {
   const trpc = useTRPC()
-  const { data: users, isLoading } = useQuery(trpc.user.getAll.queryOptions())
+  const { data: users, isLoading, isError, refetch } = useQuery(trpc.user.getAll.queryOptions())
 
   if (isLoading) return <FeedSkeleton count={6} />
+
+  if (isError) {
+    return (
+      <div role="alert" className="py-16 text-center">
+        <p className="text-sm font-medium mb-3">Couldn&apos;t load members.</p>
+        <button
+          onClick={() => void refetch()}
+          className="text-sm text-primary underline underline-offset-2 cursor-pointer hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   if (!users || users.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-xl font-semibold mb-2">No members yet.</p>
+        <h2 className="text-xl font-semibold mb-2">No members yet.</h2>
         <p className="text-sm text-muted-foreground">Check back soon.</p>
       </div>
     )
   }
 
+  const cardBase = "flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors"
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {users.map((user) => (
-        <Link
-          key={user.id}
-          href={user.username ? `/u/${user.username}` : "#"}
-          className="flex flex-col items-center gap-2 rounded-xl border p-4 text-center hover:bg-muted/50 transition-colors"
-        >
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={user.image ?? undefined} alt={user.name ?? "User"} />
-            <AvatarFallback className="text-base font-semibold">
-              {(user.name ?? "?")[0]?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="w-full min-w-0">
-            <p className="truncate text-sm font-medium leading-tight">{user.name ?? "Unnamed"}</p>
-            {user.username && (
-              <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
-            )}
-            <p className="mt-1 text-xs font-semibold tabular-nums">
-              {user.cigmaPoints} CP
-            </p>
+      {users.map((user) => {
+        const initials = ((user.name || "?")[0] ?? "?").toUpperCase()
+        const inner = (
+          <>
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={user.image ?? undefined} alt={user.name ?? "User"} />
+              <AvatarFallback className="text-base font-semibold">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="w-full min-w-0">
+              <p className="truncate text-sm font-medium leading-tight">{user.name ?? "Unnamed"}</p>
+              {user.username && (
+                <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
+              )}
+              <p className="mt-1 text-xs font-semibold tabular-nums font-mono">
+                {user.cigmaPoints} CP
+              </p>
+            </div>
+          </>
+        )
+        return user.username ? (
+          <Link
+            key={user.id}
+            href={`/u/${user.username}`}
+            className={cn(cardBase, "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2")}
+          >
+            {inner}
+          </Link>
+        ) : (
+          <div key={user.id} className={cardBase}>
+            {inner}
           </div>
-        </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -271,41 +327,49 @@ export function HomeTabs() {
       } else {
         await queryClient.refetchQueries(trpc.user.getAll.queryFilter())
       }
+    } catch {
+      toast.error("Refresh failed — check your connection.")
     } finally {
       setRefreshing(false)
     }
   }
 
   return (
-    <>
+    <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
       <div className="flex items-center border-b">
-        {(["posts", "tags", "tasks", "people"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-base font-semibold capitalize transition-colors ${
-              tab === t
-                ? "border-b-2 border-zinc-900 text-zinc-900 dark:border-zinc-50 dark:text-zinc-50"
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-            }`}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
+        <TabsList className="flex flex-1 h-auto rounded-none bg-transparent p-0">
+          {(["posts", "tags", "tasks", "people"] as const).map((t) => (
+            <TabsTrigger
+              key={t}
+              value={t}
+              className="flex-1 rounded-none px-0 py-3 text-base font-semibold capitalize transition-colors text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary -mb-px"
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
           aria-label="Refresh"
-          className="p-2 ml-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          className="ml-1 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </button>
       </div>
 
-      {tab === "posts" && <FeedList />}
-      {tab === "tags" && <TaggedFeedList />}
-      {tab === "tasks" && <TasksList />}
-      {tab === "people" && <PeopleList />}
-    </>
+      <TabsContent value="posts" className="mt-0 pt-4">
+        <FeedList />
+      </TabsContent>
+      <TabsContent value="tags" className="mt-0 pt-4">
+        <TaggedFeedList />
+      </TabsContent>
+      <TabsContent value="tasks" className="mt-0 pt-4">
+        <TasksList />
+      </TabsContent>
+      <TabsContent value="people" className="mt-0 pt-4">
+        <PeopleList />
+      </TabsContent>
+    </Tabs>
   )
 }

@@ -10,7 +10,7 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn, formatRelativeTime } from "@/lib/utils"
 import { VoteButtons } from "@/components/feed/vote-buttons"
 
 // ---------------------------------------------------------------------------
@@ -44,26 +44,6 @@ export interface PostCardProps {
   // Other optional props
   mediaUrl?: string
   replyCount?: number
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatRelativeTime(date: Date): string {
-  const now = Date.now()
-  const diffMs = now - date.getTime()
-  const diffSeconds = Math.round(diffMs / 1000)
-  const diffMinutes = Math.round(diffSeconds / 60)
-  const diffHours = Math.round(diffMinutes / 60)
-  const diffDays = Math.round(diffHours / 24)
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
-
-  if (Math.abs(diffSeconds) < 60) return rtf.format(-diffSeconds, "second")
-  if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute")
-  if (Math.abs(diffHours) < 24) return rtf.format(-diffHours, "hour")
-  return rtf.format(-diffDays, "day")
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +110,13 @@ export function PostCard({
         Rejected
       </span>
     )
+  } else if (settled) {
+    outcomeBadge = (
+      <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+        <CheckCircle2 className="h-4 w-4" />
+        Settled
+      </span>
+    )
   } else {
     outcomeBadge = null
   }
@@ -154,15 +141,15 @@ export function PostCard({
             <TypeIcon className="h-3.5 w-3.5" aria-hidden="true" />
             {typeBadgeLabel}
           </span>
-          <span className="text-sm font-semibold">
+          <span className="text-sm font-semibold font-mono tabular-nums">
             {cpAmount > 0 ? "+" : ""}
             {cpAmount} CP
           </span>
           <span className="ml-auto">{outcomeBadge}</span>
         </div>
 
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 mt-1 min-w-0">
+          <span className="text-sm text-muted-foreground break-words min-w-0">
             <span className="font-medium text-foreground">{authorName}</span>
             {" → "}
             <span className="font-medium text-foreground">{targetName}</span>
@@ -171,10 +158,10 @@ export function PostCard({
       </CardHeader>
 
       <CardContent className="pb-3">
-        <p className="text-base font-semibold">{title}</p>
+        <p className="text-base font-semibold break-words">{title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{formatRelativeTime(createdAt)}</p>
         {explanation && (
-          <p className="mt-2 text-sm text-muted-foreground">{explanation}</p>
+          <p className="mt-2 text-sm text-muted-foreground break-words text-pretty">{explanation}</p>
         )}
 
       </CardContent>
@@ -194,7 +181,7 @@ export function PostCard({
         {!settled && votingEndsAt && (
           <div className="flex w-full items-center justify-end text-sm text-muted-foreground">
             <Clock className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
-            Voting ends {new Date(votingEndsAt).toLocaleDateString("en-US", {
+            Voting ends {new Date(votingEndsAt).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
               hour: "numeric",
@@ -207,7 +194,7 @@ export function PostCard({
             <Link
               href={`/post/${id}`}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors min-h-[44px]",
                 replyCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
                   : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
