@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { UserAutocomplete } from "@/components/feed/user-autocomplete"
+import { UserMultiAutocomplete } from "@/components/feed/user-multi-autocomplete"
 
 type CreatePostValues = z.infer<typeof createPostSchema>
 
@@ -39,7 +39,7 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
   const form = useForm<CreatePostValues>({
     // z.coerce.number() gives the resolver an unknown input type; cast to align generics
     resolver: zodResolver(createPostSchema) as Resolver<CreatePostValues>,
-    defaultValues: { type: "AWARD", cpAmount: 1, title: "", explanation: "" },
+    defaultValues: { type: "AWARD", targetUserIds: [], cpAmount: 1, title: "", explanation: "" },
   })
 
   const createPost = useMutation(
@@ -116,16 +116,16 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
               </Button>
             </div>
 
-            {/* Field 2: Target user */}
+            {/* Field 2: Target users (one or more) */}
             <FormField
               control={form.control}
-              name="targetUserId"
+              name="targetUserIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target user</FormLabel>
+                  <FormLabel>Target users</FormLabel>
                   <FormControl>
-                    <UserAutocomplete
-                      value={field.value ?? null}
+                    <UserMultiAutocomplete
+                      value={field.value ?? []}
                       onChange={field.onChange}
                     />
                   </FormControl>

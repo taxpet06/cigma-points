@@ -27,13 +27,14 @@ type MockOp = {
 function makePost(overrides: {
   type?: "AWARD" | "DEDUCT"
   cpAmount?: number
+  targets?: { userId: string }[]
   votes?: { type: "AGREE" | "DISAGREE" }[]
 }) {
   return {
     id: "post-1",
     type: (overrides.type ?? "AWARD") as "AWARD" | "DEDUCT",
     cpAmount: overrides.cpAmount ?? 10,
-    targetUserId: "user-target",
+    targets: overrides.targets ?? [{ userId: "user-target" }],
     votes: overrides.votes ?? [],
   }
 }
@@ -120,6 +121,34 @@ describe("settlePost", () => {
 
   it("Rejected → no balance op (ops.length 1)", () => {
     const post = makePost({
+      votes: [{ type: "DISAGREE" }],
+    })
+    const ops = settlePost(post) as unknown as MockOp[]
+    expect(ops).toHaveLength(1)
+    expect(ops[0].data.outcome).toBe("Rejected")
+  })
+
+  it("multi-target AWARD Awarded → 1 post update + one balance op per target, each +cpAmount (M-01)", () => {
+    const post = makePost({
+      type: "AWARD",
+      cpAmount: 10,
+      targets: [{ userId: "u1" }, { userId: "u2" }, { userId: "u3" }],
+      votes: [{ type: "AGREE" }, { type: "AGREE" }, { type: "DISAGREE" }],
+    })
+    const ops = settlePost(post) as unknown as MockOp[]
+    expect(ops).toHaveLength(4) // 1 post.update + 3 user.update
+    expect(ops[0].__op).toBe("post.update")
+    const balanceOps = ops.slice(1)
+    expect(balanceOps.map((o) => o.where.id)).toEqual(["u1", "u2", "u3"])
+    for (const op of balanceOps) {
+      expect(op.__op).toBe("user.update")
+      expect(op.data.cigmaPoints).toHaveProperty("increment", 10)
+    }
+  })
+
+  it("multi-target Rejected → no balance ops regardless of target count (M-01)", () => {
+    const post = makePost({
+      targets: [{ userId: "u1" }, { userId: "u2" }],
       votes: [{ type: "DISAGREE" }],
     })
     const ops = settlePost(post) as unknown as MockOp[]

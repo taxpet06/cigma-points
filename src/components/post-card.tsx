@@ -28,7 +28,8 @@ export interface PostCardProps {
   createdAt: Date
   explanation?: string | null
   author: { id: string; name: string | null; image: string | null }
-  targetUser: { id: string; name: string | null; image: string | null }
+  // One or more target users (M-01). Each receives cpAmount individually if the post passes.
+  targets: { id: string; name: string | null; image: string | null }[]
 
   // Vote display
   agreeCount?: number
@@ -64,7 +65,7 @@ export function PostCard({
   createdAt,
   explanation,
   author,
-  targetUser,
+  targets,
   agreeCount,
   disagreeCount,
   userVote,
@@ -126,7 +127,13 @@ export function PostCard({
   }
 
   const authorName = author.name ?? "Unknown"
-  const targetName = targetUser.name ?? "Unknown"
+  const targetNames = targets.map((t) => t.name ?? "Unknown")
+  // Show up to 3 target names inline, then "+N more" so cards stay compact.
+  const targetDisplay =
+    targetNames.length <= 3
+      ? targetNames.join(", ")
+      : `${targetNames.slice(0, 3).join(", ")} +${targetNames.length - 3} more`
+  const multiTarget = targets.length > 1
 
   // Vote buttons are shown only when interaction props are provided (feed view)
   const canShowVoteButtons = !!onVote && !!onRetract
@@ -150,7 +157,7 @@ export function PostCard({
           </span>
           <span className="text-sm font-semibold font-mono tabular-nums">
             {isAward ? "+" : isDeduct ? "-" : ""}
-            {cpAmount} CP
+            {cpAmount} CP{multiTarget ? " each" : ""}
           </span>
           <span className="ml-auto">{outcomeBadge}</span>
         </div>
@@ -159,7 +166,7 @@ export function PostCard({
           <span className="text-sm text-muted-foreground break-words min-w-0">
             <span className="font-medium text-foreground">{authorName}</span>
             {" → "}
-            <span className="font-medium text-foreground">{targetName}</span>
+            <span className="font-medium text-foreground">{targetDisplay}</span>
           </span>
         </div>
       </CardHeader>

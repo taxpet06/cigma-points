@@ -5,18 +5,19 @@ type ExpiredPost = {
   id: string
   type: "AWARD" | "DEDUCT"
   cpAmount: number
-  targetUserId: string
+  targets: { userId: string }[]
   votes: { type: "AGREE" | "DISAGREE" }[]
 }
 
 /**
  * settlePost — takes an expired post snapshot and returns an array of Prisma operations.
- * Rules (per D-01, D-02, D-04):
+ * Rules (per D-01, D-02, D-04, M-01):
  *   - outcome is "Awarded" only when agreeCount > disagreeCount
  *   - outcome is "Rejected" for all other cases (tie, zero votes, disagrees >= agrees)
- *   - Awarded AWARD post → cigmaPoints increment on target user
- *   - Awarded DEDUCT post → cigmaPoints decrement on target user
+ *   - Awarded AWARD post → cigmaPoints increment by cpAmount on EACH target user individually
+ *   - Awarded DEDUCT post → cigmaPoints decrement by cpAmount on EACH target user individually
  *   - Rejected post → post update only (no balance change)
+ * An Awarded post therefore yields 1 post.update + N user.update ops (one per target).
  */
 export function settlePost(
   post: ExpiredPost,
@@ -38,17 +39,19 @@ export function settlePost(
   ]
 
   if (outcome === "Awarded") {
-    ops.push(
-      db.user.update({
-        where: { id: post.targetUserId },
-        data: {
-          cigmaPoints:
-            post.type === "AWARD"
-              ? { increment: post.cpAmount }
-              : { decrement: post.cpAmount },
-        },
-      }) as unknown as ReturnType<typeof db.post.update>,
-    )
+    for (const target of post.targets) {
+      ops.push(
+        db.user.update({
+          where: { id: target.userId },
+          data: {
+            cigmaPoints:
+              post.type === "AWARD"
+                ? { increment: post.cpAmount }
+                : { decrement: post.cpAmount },
+          },
+        }) as unknown as ReturnType<typeof db.post.update>,
+      )
+    }
   }
 
   return ops

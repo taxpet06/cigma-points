@@ -61,7 +61,7 @@ model User {
 
   // App relations
   posts            Post[]           @relation("author")
-  receivedPosts    Post[]           @relation("target")
+  targetedPosts    PostTarget[]     // posts where this user is one of the targets
   votes            Vote[]
   replies          Reply[]
   tasksCreated     Task[]
@@ -120,25 +120,39 @@ model VerificationToken {
 model Post {
   id           String   @id @default(cuid())
   authorId     String
-  targetUserId String
   type         PostType
   title        String
   explanation  String
-  cpAmount     Int
+  cpAmount     Int      // CP awarded/deducted PER target individually on settlement
   mediaUrl     String?
   settled      Boolean  @default(false)
   outcome      String?  // "Awarded" | "Rejected" | null until settled
   votingEndsAt DateTime
 
-  author     User   @relation("author", fields: [authorId], references: [id])
-  targetUser User   @relation("target", fields: [targetUserId], references: [id])
-  votes      Vote[]
-  replies    Reply[]
+  author  User         @relation("author", fields: [authorId], references: [id])
+  targets PostTarget[] // one or more target users (M-01: multi-target posts)
+  votes   Vote[]
+  replies Reply[]
 
   createdAt DateTime @default(now())
 
   @@index([createdAt])
   @@map("posts")
+}
+
+// Junction table for the many-to-many between Post and its target users (M-01).
+// A passing post awards/deducts post.cpAmount to EACH linked user individually.
+model PostTarget {
+  id     String @id @default(cuid())
+  postId String
+  userId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId]) // a user can be targeted at most once per post
+  @@index([userId])
+  @@map("post_targets")
 }
 
 model Vote {

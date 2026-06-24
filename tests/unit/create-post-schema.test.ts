@@ -3,7 +3,7 @@ import { createPostSchema } from "@/lib/validation/post"
 
 const valid = {
   type: "AWARD" as const,
-  targetUserId: "user-123",
+  targetUserIds: ["user-123"],
   title: "Great work",
   explanation: "Did something excellent",
   cpAmount: 10,
@@ -16,6 +16,21 @@ describe("createPostSchema", () => {
 
   it("accepts a valid DEDUCT post", () => {
     expect(createPostSchema.safeParse({ ...valid, type: "DEDUCT" }).success).toBe(true)
+  })
+
+  it("accepts multiple target users (M-01)", () => {
+    expect(
+      createPostSchema.safeParse({ ...valid, targetUserIds: ["u1", "u2", "u3"] }).success
+    ).toBe(true)
+  })
+
+  it("rejects an empty target list", () => {
+    expect(createPostSchema.safeParse({ ...valid, targetUserIds: [] }).success).toBe(false)
+  })
+
+  it("rejects more than 20 target users", () => {
+    const tooMany = Array.from({ length: 21 }, (_, i) => `u${i}`)
+    expect(createPostSchema.safeParse({ ...valid, targetUserIds: tooMany }).success).toBe(false)
   })
 
   it("rejects an invalid type", () => {

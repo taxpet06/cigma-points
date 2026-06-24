@@ -36,23 +36,27 @@ export const postRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const authorId = ctx.session.user.id
 
-      // Server-side self-nomination block (T-03-02 / D-09)
-      if (input.targetUserId === authorId) {
+      // Dedupe target ids — the UI shouldn't submit duplicates, but guard anyway
+      // so the @@unique([postId, userId]) constraint can never reject the create.
+      const targetIds = [...new Set(input.targetUserIds)]
+
+      // Server-side self-nomination block (T-03-02 / D-09) — applies to every target.
+      if (targetIds.includes(authorId)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "You cannot nominate yourself.",
         })
       }
 
-      // Verify target user exists and has a claimed username (T-03-03 / D-10)
-      const targetUser = await db.user.findUnique({
-        where: { id: input.targetUserId },
-        select: { id: true, username: true },
+      // Verify EVERY target user exists and has a claimed username (T-03-03 / D-10).
+      const targetUsers = await db.user.findMany({
+        where: { id: { in: targetIds }, username: { not: null } },
+        select: { id: true },
       })
-      if (!targetUser || !targetUser.username) {
+      if (targetUsers.length !== targetIds.length) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Target user not found.",
+          message: "One or more target users were not found.",
         })
       }
 
@@ -62,13 +66,13 @@ export const postRouter = createTRPCRouter({
       return db.post.create({
         data: {
           authorId,
-          targetUserId: input.targetUserId,
           type: input.type,
           title: input.title,
           explanation: input.explanation,
           cpAmount: input.cpAmount,
           mediaUrl: input.mediaUrl ?? null,
           votingEndsAt,
+          targets: { create: targetIds.map((userId) => ({ userId })) },
         },
         // Explicit select — never return sensitive fields (T-03-01 guard)
         select: { id: true, createdAt: true },
@@ -109,7 +113,7 @@ export const postRouter = createTRPCRouter({
           votingEndsAt: true,
           createdAt: true,
           author: { select: { id: true, name: true, image: true, username: true } },
-          targetUser: { select: { id: true, name: true, image: true, username: true } },
+          targets: { select: { user: { select: { id: true, name: true, image: true, username: true } } } },
           votes: { select: { type: true, userId: true } },
           _count: { select: { replies: true } },
         },
@@ -126,10 +130,12 @@ export const postRouter = createTRPCRouter({
       // Raw votes array is stripped from the return — only agreeCount, disagreeCount,
       // and userVote (the caller's own vote row or null) are exposed to clients.
       // This prevents leaking the full voter list (Information Disclosure — threat model).
+      // targets is flattened from [{ user }] to [user] so PostCard consumes a plain user list.
       const mapped = items.map((post) => {
-        const { votes, ...rest } = post
+        const { votes, targets, ...rest } = post
         return {
           ...rest,
+          targets: targets.map((t) => t.user),
           agreeCount: votes.filter((v) => v.type === "AGREE").length,
           disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
           userVote: votes.find((v) => v.userId === callerId) ?? null,
@@ -140,7 +146,7 @@ export const postRouter = createTRPCRouter({
     }),
 
   /**
-   * Returns cursor-based paginated feed of posts where the caller is the target user.
+   * Returns cursor-based paginated feed of posts where the caller is one of the target users.
    * Same shape as getFeed so PostCard can be reused without modification.
    */
   getTaggedFeed: protectedProcedure
@@ -155,7 +161,7 @@ export const postRouter = createTRPCRouter({
       const { cursor, limit } = input
 
       const items = await db.post.findMany({
-        where: { targetUserId: callerId, type: { in: ["AWARD", "DEDUCT"] } },
+        where: { targets: { some: { userId: callerId } }, type: { in: ["AWARD", "DEDUCT"] } },
         take: limit + 1,
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: { createdAt: "desc" },
@@ -171,7 +177,7 @@ export const postRouter = createTRPCRouter({
           votingEndsAt: true,
           createdAt: true,
           author: { select: { id: true, name: true, image: true, username: true } },
-          targetUser: { select: { id: true, name: true, image: true, username: true } },
+          targets: { select: { user: { select: { id: true, name: true, image: true, username: true } } } },
           votes: { select: { type: true, userId: true } },
           _count: { select: { replies: true } },
         },
@@ -184,9 +190,10 @@ export const postRouter = createTRPCRouter({
       }
 
       const mapped = items.map((post) => {
-        const { votes, ...rest } = post
+        const { votes, targets, ...rest } = post
         return {
           ...rest,
+          targets: targets.map((t) => t.user),
           agreeCount: votes.filter((v) => v.type === "AGREE").length,
           disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
           userVote: votes.find((v) => v.userId === callerId) ?? null,

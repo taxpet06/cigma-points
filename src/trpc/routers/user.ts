@@ -155,7 +155,7 @@ export const userRouter = createTRPCRouter({
    * Public: any visitor (authenticated or not) may query any userId — intentional for public profiles.
    * If private posts are introduced in a future phase, add a visibility filter here.
    * tab="sent"     → posts where authorId = userId
-   * tab="received" → posts where targetUserId = userId
+   * tab="received" → posts where userId is one of the post's targets (M-01)
    * Returns { items, nextCursor } for TanStack Query infiniteQueryOptions.
    */
   getPostHistory: publicProcedure
@@ -170,7 +170,9 @@ export const userRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { userId, tab, cursor, limit } = input
       const where =
-        tab === "sent" ? { authorId: userId } : { targetUserId: userId }
+        tab === "sent"
+          ? { authorId: userId }
+          : { targets: { some: { userId } } }
 
       const items = await db.post.findMany({
         where,
@@ -187,7 +189,7 @@ export const userRouter = createTRPCRouter({
           votingEndsAt: true,
           createdAt: true,
           author: { select: { id: true, name: true, image: true } },
-          targetUser: { select: { id: true, name: true, image: true } },
+          targets: { select: { user: { select: { id: true, name: true, image: true } } } },
           votes: { select: { type: true } },
         },
       })
@@ -198,8 +200,9 @@ export const userRouter = createTRPCRouter({
         nextCursor = nextItem.id
       }
 
-      const mappedItems = items.map(({ votes, ...rest }) => ({
+      const mappedItems = items.map(({ votes, targets, ...rest }) => ({
         ...rest,
+        targets: targets.map((t) => t.user),
         agreeCount: votes.filter((v) => v.type === "AGREE").length,
         disagreeCount: votes.filter((v) => v.type === "DISAGREE").length,
       }))

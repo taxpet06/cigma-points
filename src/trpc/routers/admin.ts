@@ -119,9 +119,16 @@ export const adminRouter = createTRPCRouter({
           await tx.reply.deleteMany({ where: { authorId: input.userId } })
         }
 
-        // 4. Delete posts where user is author or target
+        // 4. Delete posts where user is author or one of the targets (M-01).
+        // post_targets rows cascade when their parent post is deleted, so deleting
+        // these posts also clears the user's PostTarget rows (no RESTRICT violation).
         const affectedPosts = await tx.post.findMany({
-          where: { OR: [{ authorId: input.userId }, { targetUserId: input.userId }] },
+          where: {
+            OR: [
+              { authorId: input.userId },
+              { targets: { some: { userId: input.userId } } },
+            ],
+          },
           select: { id: true },
         })
         const postIds = affectedPosts.map((p) => p.id)

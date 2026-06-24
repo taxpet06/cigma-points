@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       id: true,
       type: true,
       cpAmount: true,
-      targetUserId: true,
+      targets: { select: { userId: true } },
       votes: { select: { type: true } },
     },
   })

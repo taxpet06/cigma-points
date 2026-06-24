@@ -155,7 +155,7 @@ export function FeedList() {
           votingEndsAt={item.votingEndsAt}
           createdAt={item.createdAt}
           author={item.author}
-          targetUser={item.targetUser}
+          targets={item.targets}
           agreeCount={item.agreeCount}
           disagreeCount={item.disagreeCount}
           userVote={item.userVote ? { type: item.userVote.type as "AGREE" | "DISAGREE" } : null}

@@ -12,7 +12,11 @@ import { z } from "zod"
 
 export const createPostSchema = z.object({
   type: z.enum(["AWARD", "DEDUCT"]),
-  targetUserId: z.string().min(1, "Select a target user"),
+  // One or more target users (M-01). Each target receives cpAmount individually on settlement.
+  targetUserIds: z
+    .array(z.string().min(1))
+    .min(1, "Select at least one target user")
+    .max(20, "A post can target at most 20 users"),
   title: z
     .string()
     .trim()

@@ -24,10 +24,10 @@ export async function POST(req: Request) {
       explanation: "E2E test post",
       cpAmount: 5,
       authorId: author.id,
-      targetUserId: target.id,
       votingEndsAt: new Date(Date.now() - 1000),
       settled: true,
       outcome,
+      targets: { create: [{ userId: target.id }] },
     },
   })
 

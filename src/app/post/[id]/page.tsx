@@ -35,7 +35,7 @@ export default async function PostDetailPage({
       votingEndsAt: true,
       createdAt: true,
       author: { select: { id: true, name: true, image: true } },
-      targetUser: { select: { id: true, name: true, image: true } },
+      targets: { select: { user: { select: { id: true, name: true, image: true } } } },
     },
   })
 
@@ -65,7 +65,7 @@ export default async function PostDetailPage({
         votingEndsAt={post.votingEndsAt}
         createdAt={post.createdAt}
         author={post.author}
-        targetUser={post.targetUser}
+        targets={post.targets.map((t) => t.user)}
         replyCount={undefined}
       />
 
