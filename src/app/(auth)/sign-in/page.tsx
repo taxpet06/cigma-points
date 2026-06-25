@@ -45,7 +45,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center px-4">
       <Card className="w-full max-w-sm animate-card-rise">
         <CardHeader>
           <CardTitle className="text-2xl">Sign in</CardTitle>

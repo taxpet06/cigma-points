@@ -86,7 +86,7 @@ export function CreateTaskModal() {
           Create Task
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create Task</DialogTitle>
         </DialogHeader>

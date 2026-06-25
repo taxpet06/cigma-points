@@ -25,6 +25,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   viewportFit: "cover",
+  // Shrink the layout viewport (and dvh units) when the on-screen keyboard opens
+  // so dialogs/forms stay scrollable and their fields/buttons remain reachable.
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#141212" },

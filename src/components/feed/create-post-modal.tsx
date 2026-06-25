@@ -76,7 +76,7 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
         )}
       </DialogTrigger>
       <DialogContent
-        className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-lg"
         onInteractOutside={(e) => {
           // The autocomplete dropdown portals to document.body. Radix's
           // onInteractOutside fires on pointerdown — before onClick — and treats the
