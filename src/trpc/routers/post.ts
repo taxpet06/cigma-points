@@ -8,7 +8,7 @@
 // Security:
 //   T-03-01 — createPost: authorId = ctx.session.user.id (never from client input)
 //   T-03-02 — createPost: self-nomination guard (targetUserId === authorId → BAD_REQUEST)
-//   T-03-03 — createPost: target user verified to exist and have a username before db.post.create
+//   T-03-03 — createPost: every target user verified to exist before db.post.create
 //   T-03-04 — createPost: votingEndsAt set server-side (Date.now() + 24h); absent from input schema
 //   T-03-05 — getFeed / searchUsers: protectedProcedure — UNAUTHORIZED before any DB access
 //   T-03-06 — searchUsers: excludes self (id: { not: callerId })
@@ -27,7 +27,7 @@ export const postRouter = createTRPCRouter({
    * Security:
    * - authorId is always sourced from ctx.session.user.id — never from client input (T-03-01)
    * - Self-nomination is blocked server-side before any DB write (T-03-02)
-   * - Target user must exist and have a claimed username (T-03-03)
+   * - Every target user must exist (T-03-03); a claimed username is not required
    * - votingEndsAt is computed server-side as Date.now() + 24h (T-03-04)
    * - createPostSchema excludes settled, outcome, votingEndsAt, authorId (mass-assignment guard)
    */
@@ -48,9 +48,12 @@ export const postRouter = createTRPCRouter({
         })
       }
 
-      // Verify EVERY target user exists and has a claimed username (T-03-03 / D-10).
+      // Verify EVERY target user exists (T-03-03). A claimed username is NOT
+      // required — searchUsers surfaces usernameless users (they appear by display
+      // name), so they must be valid targets too, else createPost would reject any
+      // selection the autocomplete itself offered.
       const targetUsers = await db.user.findMany({
-        where: { id: { in: targetIds }, username: { not: null } },
+        where: { id: { in: targetIds } },
         select: { id: true },
       })
       if (targetUsers.length !== targetIds.length) {
