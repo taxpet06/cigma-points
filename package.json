@@ -12,6 +12,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev && prisma generate",
     "db:seed": "node --env-file=.env.local tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:studio:prod": "PRISMA_ENV=production prisma studio",
     "test:unit": "vitest run",
     "test:e2e": "playwright test"
   },
