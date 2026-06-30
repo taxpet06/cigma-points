@@ -11,9 +11,11 @@
 
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { after } from "next/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { updateBalanceSchema } from "@/lib/validation/task"
+import { notifyCpChange } from "@/lib/notifications"
 
 export const adminRouter = createTRPCRouter({
   /**
@@ -66,11 +68,16 @@ export const adminRouter = createTRPCRouter({
       if (!target) {
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
       }
-      return db.user.update({
+      const result = await db.user.update({
         where: { id: input.userId },
         data: { cigmaPoints: input.newBalance },
         select: { id: true, cigmaPoints: true },
       })
+
+      // Non-blocking: notify the affected user after the response is sent (T-x04-02)
+      after(() => notifyCpChange(input.userId))
+
+      return result
     }),
 
   /**

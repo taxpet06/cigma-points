@@ -15,10 +15,12 @@
 
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { after } from "next/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { createPostSchema } from "@/lib/validation/post"
 import { castVoteSchema, retractVoteSchema } from "@/lib/validation/vote"
+import { notifyTaggedInPost } from "@/lib/notifications"
 
 export const postRouter = createTRPCRouter({
   /**
@@ -66,7 +68,7 @@ export const postRouter = createTRPCRouter({
       // votingEndsAt is server-set — never from client input (T-03-04 / D-11)
       const votingEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-      return db.post.create({
+      const post = await db.post.create({
         data: {
           authorId,
           type: input.type,
@@ -80,6 +82,11 @@ export const postRouter = createTRPCRouter({
         // Explicit select — never return sensitive fields (T-03-01 guard)
         select: { id: true, createdAt: true },
       })
+
+      // Non-blocking: notify tagged users after the response is sent (T-x04-02)
+      after(() => notifyTaggedInPost(targetIds, post.id))
+
+      return post
     }),
 
   /**

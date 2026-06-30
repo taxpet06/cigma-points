@@ -3,8 +3,10 @@
 // via cron-job.org (free tier) is used instead of vercel.json crons.
 // Authorization: Bearer ${CRON_SECRET} header required — set in cron-job.org job config.
 
+import { after } from "next/server"
 import { db } from "@/lib/db"
 import { settlePost } from "@/lib/settlement"
+import { notifyCpChange } from "@/lib/notifications"
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
@@ -41,6 +43,20 @@ export async function GET(req: Request) {
     settlePost(post as typeof post & { type: "AWARD" | "DEDUCT" }),
   )
   await db.$transaction(ops)
+
+  // Non-blocking: notify targets of Awarded posts after the response is sent (T-x04-02).
+  // Recompute the Awarded outcome inline — same rule used in settlePost (agreeCount > disagreeCount).
+  after(() => {
+    for (const post of expiredPosts) {
+      const agree = post.votes.filter((v) => v.type === "AGREE").length
+      const disagree = post.votes.filter((v) => v.type === "DISAGREE").length
+      if (agree > disagree) {
+        for (const target of post.targets) {
+          void notifyCpChange(target.userId)
+        }
+      }
+    }
+  })
 
   return Response.json({ settled: expiredPosts.length })
 }

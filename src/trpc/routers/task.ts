@@ -17,9 +17,11 @@
 
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { after } from "next/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { createTaskSchema, completeTaskSchema } from "@/lib/validation/task"
+import { notifyCpChange } from "@/lib/notifications"
 
 export const taskRouter = createTRPCRouter({
   /**
@@ -203,6 +205,10 @@ export const taskRouter = createTRPCRouter({
       if (!awarded) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Already awarded." })
       }
+
+      // Non-blocking: notify the awarded user after the response is sent (T-x04-02).
+      // Only fires on the real-award path (awarded === true); not on idempotent re-award.
+      after(() => notifyCpChange(reply.authorId))
 
       return { awarded: true }
     }),
