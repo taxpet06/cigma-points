@@ -10,6 +10,19 @@ function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "")
 }
 
+/** Plain-text fallback for the HTML shell — improves deliverability. */
+function emailText({
+  heading,
+  bodyText,
+  url,
+}: {
+  heading: string
+  bodyText: string
+  url: string
+}): string {
+  return [heading, "", bodyText, "", url, "", "---", "Cigma Points — " + appUrl()].join("\n")
+}
+
 /**
  * Minimal, fully inline-styled HTML shell for notification emails.
  * Email clients strip <style> tags and external CSS — all styles must be inline.
@@ -85,8 +98,9 @@ export async function notifyTaggedInPost(
   await Promise.all(
     users
       .filter((u) => u.email !== null)
-      .map((u) =>
-        sendEmail({
+      .map((u) => {
+        const bodyText = `Hi ${u.name ?? "there"}, someone has nominated you in a Cigma Points award or deduction post. Visit the post to see the details and vote counts.`
+        return sendEmail({
           to: u.email!,
           subject: "You've been tagged in a Cigma Points post",
           html: emailShell({
@@ -94,8 +108,9 @@ export async function notifyTaggedInPost(
             bodyHtml: `<p>Hi ${u.name ?? "there"},</p><p>Someone has nominated you in a Cigma Points award or deduction post. Visit the post to see the details and vote counts.</p>`,
             url,
           }),
-        }),
-      ),
+          text: emailText({ heading: "You were tagged in a post", bodyText, url }),
+        })
+      }),
   )
 }
 
@@ -113,6 +128,7 @@ export async function notifyCpChange(userId: string): Promise<void> {
 
   const url = user.username ? `${appUrl()}/u/${user.username}` : `${appUrl()}/`
 
+  const bodyText = `Hi ${user.name ?? "there"}, check your Cigma Point Balance — your account has been updated. Visit your profile to see your current balance and recent activity.`
   await sendEmail({
     to: user.email,
     subject: "Your Cigma Points balance has been updated",
@@ -121,5 +137,6 @@ export async function notifyCpChange(userId: string): Promise<void> {
       bodyHtml: `<p>Hi ${user.name ?? "there"},</p><p>Check your Cigma Point Balance — your account has been updated. Visit your profile to see your current balance and recent activity.</p>`,
       url,
     }),
+    text: emailText({ heading: "Your CP balance changed", bodyText, url }),
   })
 }

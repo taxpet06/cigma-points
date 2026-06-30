@@ -33,10 +33,12 @@ export async function sendEmail({
   to,
   subject,
   html,
+  text,
 }: {
   to: string
   subject: string
   html: string
+  text: string
 }): Promise<void> {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     console.warn(
@@ -52,6 +54,11 @@ export async function sendEmail({
       to,
       subject,
       html,
+      text,
+      headers: {
+        // Signals to spam filters that recipients can opt out
+        "List-Unsubscribe": `<mailto:${process.env.GMAIL_USER}?subject=unsubscribe>`,
+      },
     })
   } catch (err) {
     console.warn("[email] Failed to send email via Gmail SMTP:", err)
