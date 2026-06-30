@@ -77,6 +77,45 @@ function emailShell({
 }
 
 /**
+ * Broadcasts a new-task notification to every registered user with an email.
+ * Users with a null email are silently skipped.
+ */
+export async function notifyNewTask(
+  taskId: string,
+  taskTitle: string,
+  cpReward: number | null,
+): Promise<void> {
+  const users = await db.user.findMany({
+    where: { email: { not: null } },
+    select: { email: true, name: true },
+  })
+
+  const url = `${appUrl()}/tasks/${taskId}`
+  const rewardLine =
+    cpReward != null
+      ? `Complete it to earn ${cpReward} CP.`
+      : "Complete it to earn CP rewards."
+
+  await Promise.all(
+    users
+      .filter((u) => u.email !== null)
+      .map((u) => {
+        const bodyText = `Hi ${u.name ?? "there"}, a new task has been posted: "${taskTitle}". ${rewardLine}`
+        return sendEmail({
+          to: u.email!,
+          subject: `New task: ${taskTitle}`,
+          html: emailShell({
+            heading: "New task available",
+            bodyHtml: `<p>Hi ${u.name ?? "there"},</p><p>A new task has been posted: <strong>${taskTitle}</strong>. ${rewardLine}</p>`,
+            url,
+          }),
+          text: emailText({ heading: "New task available", bodyText, url }),
+        })
+      }),
+  )
+}
+
+/**
  * Notifies each tagged user when they are named in a new AWARD or DEDUCT post.
  * Users with a null email are silently skipped.
  */

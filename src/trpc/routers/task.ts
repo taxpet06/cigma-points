@@ -21,7 +21,7 @@ import { after } from "next/server"
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init"
 import { db } from "@/lib/db"
 import { createTaskSchema, completeTaskSchema } from "@/lib/validation/task"
-import { notifyCpChange } from "@/lib/notifications"
+import { notifyCpChange, notifyNewTask } from "@/lib/notifications"
 
 export const taskRouter = createTRPCRouter({
   /**
@@ -39,7 +39,7 @@ export const taskRouter = createTRPCRouter({
         throw new TRPCError({ code: "FORBIDDEN", message: "Admin only." })
       }
       const adminId = ctx.session.user.id // never from client input (T-6-04)
-      return db.task.create({
+      const task = await db.task.create({
         data: {
           adminId,
           title: input.title,
@@ -49,6 +49,8 @@ export const taskRouter = createTRPCRouter({
         },
         select: { id: true, createdAt: true },
       })
+      after(() => notifyNewTask(task.id, input.title, input.cpReward ?? null))
+      return task
     }),
 
   /**
