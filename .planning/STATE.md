@@ -208,5 +208,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 260624-x2w | Add prod-database env file + Prisma Studio prod script | 2026-06-25 | c32efad | [260624-x2w-add-prod-database-env-file-and-prisma-st](./quick/260624-x2w-add-prod-database-env-file-and-prisma-st/) |
 | 260630-ruv | Fix stay-logged-in bug — redirect authenticated users away from sign-in/sign-up, router.replace on sign-in success | 2026-06-30 | 2939a11 | [260630-ruv-fix-stay-logged-in-bug-redirect-authenti](./quick/260630-ruv-fix-stay-logged-in-bug-redirect-authenti/) |
 | 260630-s2x | Add people-picker to create-post user search: icon button opens in-place swap view with searchable user grid, OK merges selection into chip state | 2026-07-01 | 4b69bb9 | [260630-s2x-add-people-picker-to-create-post-user-se](./quick/260630-s2x-add-people-picker-to-create-post-user-se/) |
+| 260630-ser | Allow user CP balances to go negative in admin panel | 2026-07-01 | 2044649 | [260630-ser-allow-user-cp-balances-to-go-negative-in](./quick/260630-ser-allow-user-cp-balances-to-go-negative-in/) |
 
-Last activity: 2026-07-01 - Completed quick task 260630-s2x: Add people-picker to create-post user search (pending manual mobile/browser verification — see SUMMARY.md checkpoint)
+Last activity: 2026-07-01 - Completed quick task 260630-ser: Allow user CP balances to go negative in admin panel
