@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useDebounce } from "use-debounce"
 import { useQuery } from "@tanstack/react-query"
-import { X } from "lucide-react"
+import { X, Users } from "lucide-react"
 import { useTRPC } from "@/trpc/client"
 import { Input } from "@/components/ui/input"
 
@@ -21,9 +21,11 @@ type SelectedUser = { id: string; name: string | null; username: string | null }
 export function UserMultiAutocomplete({
   value,
   onChange,
+  onOpenPicker,
 }: {
   value: string[]
   onChange: (userIds: string[]) => void
+  onOpenPicker?: () => void
 }) {
   const trpc = useTRPC()
   const [query, setQuery] = useState("")
@@ -35,14 +37,23 @@ export function UserMultiAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
 
-  // Chips are derived from `value` (the source of truth) intersected with the
-  // user objects we've captured. When the form resets value to [], the chips
-  // clear automatically — no state-sync effect needed.
-  const displayed = selected.filter((u) => value.includes(u.id))
-
   const { data: results, isLoading } = useQuery({
     ...trpc.post.searchUsers.queryOptions({ query: debouncedQuery }),
     enabled: debouncedQuery.length >= 1,
+  })
+
+  // Chips must resolve names for ids added via either the search dropdown (captured
+  // in `selected`) or the picker grid (only known to us as a bare id) — fall back to
+  // getAll (deduped/cached with the People tab) before falling back to the id itself.
+  const { data: allUsers } = useQuery(trpc.user.getAll.queryOptions())
+  const allUsersById = new Map((allUsers ?? []).map((u) => [u.id, u]))
+  const selectedById = new Map(selected.map((u) => [u.id, u]))
+  const displayed: SelectedUser[] = value.map((id) => {
+    const fromSearch = selectedById.get(id)
+    if (fromSearch) return fromSearch
+    const fromAll = allUsersById.get(id)
+    if (fromAll) return { id: fromAll.id, name: fromAll.name, username: fromAll.username }
+    return { id, name: null, username: null }
   })
 
   const isDropdownOpen = open && debouncedQuery.length >= 1
@@ -133,10 +144,10 @@ export function UserMultiAutocomplete({
               key={u.id}
               className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-sm text-primary"
             >
-              <span>{u.name ?? u.username}</span>
+              <span>{u.name ?? u.username ?? u.id}</span>
               <button
                 type="button"
-                aria-label={`Remove ${u.name ?? u.username}`}
+                aria-label={`Remove ${u.name ?? u.username ?? u.id}`}
                 className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
                 onClick={() => removeUser(u.id)}
               >
@@ -146,19 +157,32 @@ export function UserMultiAutocomplete({
           ))}
         </ul>
       )}
-      <Input
-        ref={inputRef}
-        role="combobox"
-        aria-label="Search for users by name"
-        aria-expanded={isDropdownOpen}
-        aria-autocomplete="list"
-        aria-haspopup="listbox"
-        aria-controls={isDropdownOpen ? "user-search-listbox" : undefined}
-        placeholder="Search users…"
-        value={query}
-        onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
-        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false) }}
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          role="combobox"
+          aria-label="Search for users by name"
+          aria-expanded={isDropdownOpen}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-controls={isDropdownOpen ? "user-search-listbox" : undefined}
+          placeholder="Search users…"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+          onKeyDown={(e) => { if (e.key === "Escape") setOpen(false) }}
+          className={onOpenPicker ? "pr-10" : undefined}
+        />
+        {onOpenPicker && (
+          <button
+            type="button"
+            aria-label="Browse people"
+            onClick={onOpenPicker}
+            className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Users className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </div>
       {dropdown}
     </div>
   )
