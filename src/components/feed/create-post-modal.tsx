@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { UserMultiAutocomplete } from "@/components/feed/user-multi-autocomplete"
+import { UserPickerView } from "@/components/feed/user-picker-view"
 
 type CreatePostValues = z.infer<typeof createPostSchema>
 
@@ -35,6 +36,7 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<"form" | "picker">("form")
 
   const form = useForm<CreatePostValues>({
     // z.coerce.number() gives the resolver an unknown input type; cast to align generics
@@ -56,7 +58,10 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
   )
 
   function handleOpenChange(v: boolean) {
-    if (!v) form.reset()
+    if (!v) {
+      form.reset()
+      setView("form")
+    }
     setOpen(v)
   }
 
@@ -89,6 +94,17 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
           }
         }}
       >
+        {view === "picker" ? (
+          <UserPickerView
+            value={form.getValues("targetUserIds") ?? []}
+            onConfirm={(ids) => {
+              form.setValue("targetUserIds", ids, { shouldValidate: true, shouldDirty: true })
+              setView("form")
+            }}
+            onBack={() => setView("form")}
+          />
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle>Create Post</DialogTitle>
         </DialogHeader>
@@ -127,6 +143,7 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
                     <UserMultiAutocomplete
                       value={field.value ?? []}
                       onChange={field.onChange}
+                      onOpenPicker={() => setView("picker")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -210,6 +227,8 @@ export function CreatePostModal({ trigger }: { trigger?: React.ReactNode } = {})
             </DialogFooter>
           </form>
         </Form>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   )
