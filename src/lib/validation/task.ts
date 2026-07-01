@@ -22,7 +22,9 @@ export const createTaskSchema = z.object({
 
 export const updateBalanceSchema = z.object({
   userId: z.string().min(1),
-  newBalance: z.number().int().min(0),
+  // Negative values allowed — settlement.ts already permits negative balances
+  // via increment/decrement, so the admin path is consistent with that behavior.
+  newBalance: z.number().int(),
   // No reason field — D-06 (no audit trail)
 })
 

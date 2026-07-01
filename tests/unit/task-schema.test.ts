@@ -80,8 +80,8 @@ describe("updateBalanceSchema", () => {
     expect(updateBalanceSchema.safeParse({ userId: "u1", newBalance: 50 }).success).toBe(true)
   })
 
-  it("rejects negative newBalance", () => {
-    expect(updateBalanceSchema.safeParse({ userId: "u1", newBalance: -1 }).success).toBe(false)
+  it("accepts negative newBalance", () => {
+    expect(updateBalanceSchema.safeParse({ userId: "u1", newBalance: -1 }).success).toBe(true)
   })
 
   it("rejects non-integer newBalance", () => {
