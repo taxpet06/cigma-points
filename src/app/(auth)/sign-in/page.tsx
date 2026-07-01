@@ -6,6 +6,7 @@
 // Displays an error on invalid credentials.
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import {
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button"
 export default function SignInPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -38,8 +40,9 @@ export default function SignInPage() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.")
       } else if (!result?.error) {
-        // Sign-in succeeded -- navigate to home
-        window.location.href = "/"
+        // Sign-in succeeded -- replace history entry so back button
+        // does not return to the sign-in page
+        router.replace("/")
       }
     })
   }
