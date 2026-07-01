@@ -3,6 +3,8 @@
 //
 // AUTH-04: Non-ADMIN users are redirected away from /admin*.
 // Unauthenticated users are redirected to /sign-in (except /sign-in and /sign-up).
+// AUTH-03: Authenticated users are redirected away from /sign-in and /sign-up to /
+// so a valid session never re-renders the auth forms (e.g. via browser back button).
 //
 // Security notes:
 //   - T-01-06: middleware is the FIRST gate; requireAdmin() in Server Components
@@ -20,8 +22,11 @@ export default NextAuth(authConfig).auth((req) => {
   const isLoggedIn = !!req.auth
   const isAdmin = req.auth?.user?.role === "ADMIN"
 
-  // Allow sign-in and sign-up pages through without authentication
+  // Auth pages: redirect logged-in users away, otherwise allow through
   if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL("/", req.url))
+    }
     return NextResponse.next()
   }
 
